@@ -1,19 +1,56 @@
-# Unsloth-MLX
+<p align="center">
+  <img src="unsloth_mlx_logo_f.png" alt="Unsloth-MLX Logo" width="200"/>
+</p>
 
-> **Unsloth for Mac** - MLX-powered LLM fine-tuning for Apple Silicon
+<h1 align="center">Unsloth-MLX</h1>
+
+<p align="center">
+  <strong>Fine-tune LLMs on your Mac with Apple Silicon</strong><br>
+  <em>Prototype locally, scale to cloud. Same code, just change the import.</em>
+</p>
+
+<p align="center">
+  <a href="#installation"><img src="https://img.shields.io/badge/Platform-Apple%20Silicon-black?logo=apple" alt="Platform"></a>
+  <a href="#requirements"><img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://github.com/ml-explore/mlx"><img src="https://img.shields.io/badge/MLX-0.20+-green" alt="MLX"></a>
+  <a href="#license"><img src="https://img.shields.io/badge/License-Apache%202.0-orange" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#supported-training-methods">Training Methods</a> ·
+  <a href="#examples">Examples</a> ·
+  <a href="#project-status">Status</a>
+</p>
+
+---
+
+## Why Unsloth-MLX?
 
 Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac users via Apple's [MLX](https://github.com/ml-explore/mlx) framework.
+
+- 🚀 **Fine-tune LLMs locally** on your Mac (M1/M2/M3/M4/M5)
+- 💾 **Leverage unified memory** (up to 192GB on Mac Studio)
+- 🔄 **Same API as Unsloth** - your existing code just works!
+- 📦 **Export anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
+
+```python
+# Unsloth (CUDA)                        # Unsloth-MLX (Apple Silicon)
+from unsloth import FastLanguageModel   from unsloth_mlx import FastLanguageModel
+from trl import SFTTrainer              from unsloth_mlx import SFTTrainer
+
+# Rest of your code stays exactly the same!
+```
 
 ## What This Is (and Isn't)
 
 **This is NOT** a replacement for Unsloth or an attempt to compete with it. Unsloth is incredible - it's the gold standard for efficient LLM fine-tuning on CUDA.
 
 **This IS** a bridge for Mac users who want to:
-- 🧪 **Prototype locally** - Experiment with fine-tuning on your Mac before committing to cloud GPU costs
+- 🧪 **Prototype locally** - Experiment with fine-tuning before committing to cloud GPU costs
 - 📚 **Learn & iterate** - Develop your training pipeline with fast local feedback loops
 - 🔄 **Then scale up** - Move to cloud NVIDIA GPUs + original Unsloth for production training
 
-**The workflow:**
 ```
 Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
    Prototype & experiment          Full-scale training
@@ -21,18 +58,9 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
    Quick iterations                Production runs
 ```
 
-Same code, just change the import. Start local, scale to cloud.
-
-## Why Unsloth-MLX?
-
-- 🚀 **Fine-tune LLMs locally** on your Mac (M1/M2/M3/M4/M5)
-- 💾 **Leverage unified memory** (up to 192GB on Mac Studio)
-- 🔄 **Same API as Unsloth** - just change the import line!
-- 📦 **Save anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
-
 ## Project Status
 
-> 🚧 **Building in Public** - This project is actively developed. Core features work, advanced features in progress.
+> 🚧 **Building in Public** - Core features work, advanced features in progress.
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -42,7 +70,6 @@ Same code, just change the import. Start local, scale to cloud.
 | DPO/ORPO/GRPO | ⚠️ Beta | API ready, full loss coming |
 | Vision Models | ⚠️ Beta | Via mlx-vlm |
 | PyPI Package | 🔜 Soon | Install from source for now |
-| M5 Optimization | 🔜 Planned | Neural Accelerator support |
 
 ## Installation
 
@@ -59,7 +86,6 @@ pip install -e .
 ## Quick Start
 
 ```python
-# Just change this import - rest of your Unsloth code works!
 from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
 
 # Load any HuggingFace model
@@ -108,19 +134,6 @@ model.save_pretrained_gguf("model", tokenizer, quantization_method="q4_k_m")  # 
 | **SimPO** | `SimPOTrainer` | ⚠️ Beta | Simple preference optimization |
 | **VLM** | `VLMSFTTrainer` | ⚠️ Beta | Vision-Language models |
 
-## API Compatibility
-
-The goal is **zero code changes** when switching between Mac and CUDA:
-
-```python
-# Unsloth (CUDA)
-from unsloth import FastLanguageModel
-from trl import SFTTrainer, SFTConfig
-
-# Unsloth-MLX (Apple Silicon) - just change the import!
-from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
-```
-
 ## Examples
 
 Check [`examples/`](examples/) for working code:
@@ -131,25 +144,9 @@ Check [`examples/`](examples/) for working code:
 ## Requirements
 
 - **Hardware**: Apple Silicon Mac (M1/M2/M3/M4/M5)
-- **OS**: macOS 13.0+ (15.0+ for large models)
+- **OS**: macOS 13.0+ (15.0+ recommended for large models)
 - **Memory**: 16GB+ unified RAM (32GB+ for 7B+ models)
 - **Python**: 3.9+
-
-## What's Next
-
-- [ ] PyPI package release
-- [ ] Full DPO/GRPO loss implementations
-- [ ] M5 Neural Accelerator optimization
-- [ ] Custom MLX kernels
-- [ ] More documentation & tutorials
-
-## Contributing
-
-Contributions welcome! Areas that need help:
-- Full RL loss implementations (DPO, GRPO)
-- Custom MLX kernels for performance
-- Documentation and examples
-- Testing on different M-series chips
 
 ## Comparison with Unsloth
 
@@ -161,9 +158,17 @@ Contributions welcome! Areas that need help:
 | API | Original | 100% Compatible |
 | Best For | Production training | Local dev, large models |
 
+## Contributing
+
+Contributions welcome! Areas that need help:
+- Full RL loss implementations (DPO, GRPO)
+- Custom MLX kernels for performance
+- Documentation and examples
+- Testing on different M-series chips
+
 ## License
 
-Apache 2.0
+Apache 2.0 - See [LICENSE](LICENSE) file.
 
 ## Acknowledgments
 
@@ -174,6 +179,7 @@ Apache 2.0
 
 ---
 
-**Note**: Community project, not affiliated with Unsloth AI or Apple.
-
-⭐ Star this repo if you find it useful!
+<p align="center">
+  <strong>Community project, not affiliated with Unsloth AI or Apple.</strong><br>
+  ⭐ Star this repo if you find it useful!
+</p>
