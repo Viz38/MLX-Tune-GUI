@@ -1,0 +1,3 @@
+{"messages": [{"role": "user", "content": "What is machine learning?"}, {"role": "assistant", "content": "Machine learning is a subset of artificial intelligence that enables systems to learn and improve from experience without being explicitly programmed."}]}
+{"messages": [{"role": "user", "content": "What is deep learning?"}, {"role": "assistant", "content": "Deep learning is a subset of machine learning that uses neural networks with multiple layers to learn hierarchical representations of data."}]}
+{"messages": [{"role": "user", "content": "What is a neural network?"}, {"role": "assistant", "content": "A neural network is a computational model inspired by biological neural networks, consisting of interconnected nodes (neurons) organized in layers."}]}

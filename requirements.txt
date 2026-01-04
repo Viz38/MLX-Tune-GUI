@@ -1,0 +1,14 @@
+# Core dependencies
+mlx>=0.20.0
+mlx-lm>=0.18.0
+transformers>=4.36.0
+tokenizers>=0.15.0
+datasets>=2.14.0
+huggingface-hub>=0.20.0
+numpy>=1.23.0
+tqdm>=4.65.0
+
+# Optional training dependencies (install with: pip install -r requirements-train.txt)
+# trl>=0.7.0
+# peft>=0.7.0
+# wandb>=0.15.0

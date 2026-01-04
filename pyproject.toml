@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unsloth-mlx"
+version = "0.2.0"
+description = "MLX-powered LLM fine-tuning for Apple Silicon - A drop-in replacement for Unsloth"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "Unsloth-MLX Contributors"}
+]
+keywords = ["llm", "fine-tuning", "mlx", "apple-silicon", "lora", "unsloth", "mac"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "mlx>=0.20.0",
+    "mlx-lm>=0.18.0",
+    "transformers>=4.36.0",
+    "tokenizers>=0.15.0",
+    "datasets>=2.14.0",
+    "huggingface-hub>=0.20.0",
+    "numpy>=1.23.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.7.0",
+    "ruff>=0.0.284",
+    "ipython>=8.12.0",
+]
+vlm = [
+    "mlx-vlm>=0.1.0",
+]
+train = [
+    "trl>=0.7.0",
+    "peft>=0.7.0",
+    "wandb>=0.15.0",
+]
+all = [
+    "unsloth-mlx[dev,train,vlm]",
+]
+
+[project.urls]
+Homepage = "https://github.com/ARahim3/unsloth-mlx"
+Documentation = "https://github.com/ARahim3/unsloth-mlx#readme"
+Repository = "https://github.com/ARahim3/unsloth-mlx"
+Issues = "https://github.com/ARahim3/unsloth-mlx/issues"
+
+[tool.setuptools.packages.find]
+include = ["unsloth_mlx*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=unsloth_mlx --cov-report=term-missing"
