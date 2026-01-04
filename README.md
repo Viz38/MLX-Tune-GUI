@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="unsloth_mlx_logo_f.png" alt="Unsloth-MLX Logo" width="200"/>
+  <img src="unsloth_mlx_logo_f.png" alt="Unsloth-MLX Logo" width="150"/>
 </p>
 
 <h1 align="center">Unsloth-MLX</h1>
@@ -28,7 +28,7 @@
 Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac users via Apple's [MLX](https://github.com/ml-explore/mlx) framework.
 
 - 🚀 **Fine-tune LLMs locally** on your Mac (M1/M2/M3/M4/M5)
-- 💾 **Leverage unified memory** (up to 192GB on Mac Studio)
+- 💾 **Leverage unified memory** (up to 512GB on Mac Studio)
 - 🔄 **Same API as Unsloth** - your existing code just works!
 - 📦 **Export anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
 
