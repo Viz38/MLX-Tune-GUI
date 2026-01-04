@@ -153,7 +153,7 @@ Check [`examples/`](examples/) for working code:
 |---------|----------------|-------------|
 | Platform | NVIDIA GPUs | Apple Silicon |
 | Backend | Triton Kernels | MLX Framework |
-| Memory | VRAM (limited) | Unified (up to 192GB) |
+| Memory | VRAM (limited) | Unified (up to 512GB) |
 | API | Original | 100% Compatible |
 | Best For | Production training | Local dev, large models |
 
