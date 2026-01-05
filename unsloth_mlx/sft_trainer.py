@@ -2,14 +2,37 @@
 SFTTrainer - Supervised Fine-Tuning Trainer for Unsloth-MLX
 
 Provides Unsloth/TRL-compatible training interface using MLX under the hood.
+Supports both native MLX training and subprocess fallback.
 """
 
-from typing import Optional, Dict, Any, Union, List
+from typing import Optional, Dict, Any, Union, List, Callable
 from pathlib import Path
 import json
 import subprocess
 import tempfile
 import os
+import types
+import warnings
+import yaml
+
+import mlx.core as mx
+
+# Try to import native training components
+try:
+    from mlx_lm.tuner.trainer import train as mlx_train, TrainingArgs
+    from mlx_lm.tuner.datasets import load_dataset as mlx_load_dataset, CacheDataset
+    import mlx.nn as nn
+    import mlx.optimizers as optim
+    HAS_NATIVE_TRAINING = True
+except ImportError:
+    HAS_NATIVE_TRAINING = False
+    mlx_load_dataset = None
+    CacheDataset = None
+    warnings.warn(
+        "Native training not available. Install with: pip install 'mlx-lm[train]'. "
+        "Falling back to subprocess-based training.",
+        ImportWarning
+    )
 
 
 class SFTConfig:
@@ -46,7 +69,7 @@ class SFTConfig:
         gradient_accumulation_steps: int = 4,
         # Learning rate
         learning_rate: float = 2e-4,
-        lr_scheduler_type: str = "linear",
+        lr_scheduler_type: str = "cosine",  # cosine, linear, constant
         warmup_steps: int = 10,
         warmup_ratio: float = 0.0,
         # Training duration
@@ -66,6 +89,10 @@ class SFTConfig:
         max_seq_length: int = 2048,
         dataset_text_field: Optional[str] = None,
         packing: bool = False,
+        # MLX-specific options
+        use_native_training: bool = True,  # Use native MLX training vs subprocess
+        grad_checkpoint: bool = False,  # Enable gradient checkpointing
+        num_layers: Optional[int] = None,  # Number of layers to apply LoRA to
         **kwargs
     ):
         self.output_dir = output_dir
@@ -88,6 +115,9 @@ class SFTConfig:
         self.max_seq_length = max_seq_length
         self.dataset_text_field = dataset_text_field
         self.packing = packing
+        self.use_native_training = use_native_training
+        self.grad_checkpoint = grad_checkpoint
+        self.num_layers = num_layers
 
         # Store any additional kwargs
         for key, value in kwargs.items():
@@ -178,6 +208,9 @@ class SFTTrainer:
             iters: Number of iterations (alternative to epochs)
             **kwargs: Additional training arguments
         """
+        # Store the args object for later access
+        self.args = args
+
         # If args is provided (SFTConfig), extract values from it
         if args is not None:
             if hasattr(args, 'to_dict'):
@@ -197,6 +230,13 @@ class SFTTrainer:
             max_steps = args_dict.get('max_steps', max_steps)
             max_seq_length = args_dict.get('max_seq_length', max_seq_length)
             dataset_text_field = args_dict.get('dataset_text_field', dataset_text_field)
+
+        # MLX-specific options
+        self.use_native_training = getattr(args, 'use_native_training', True) if args else True
+        self.grad_checkpoint = getattr(args, 'grad_checkpoint', False) if args else False
+        self.lr_scheduler_type = getattr(args, 'lr_scheduler_type', 'cosine') if args else 'cosine'
+        self.num_layers = getattr(args, 'num_layers', None) if args else None
+        self.weight_decay = getattr(args, 'weight_decay', 0.01) if args else 0.01
 
         self.model = model
         # Get tokenizer from model if not provided
@@ -255,6 +295,58 @@ class SFTTrainer:
         print(f"  Iterations: {self.iters}")
         print(f"  Batch size: {self.batch_size}")
         print(f"  LoRA r={self.lora_r}, alpha={self.lora_alpha}")
+        print(f"  Native training: {self.use_native_training and HAS_NATIVE_TRAINING}")
+        print(f"  LR scheduler: {self.lr_scheduler_type}")
+        print(f"  Grad checkpoint: {self.grad_checkpoint}")
+
+    def _get_lr_schedule(self):
+        """
+        Get learning rate schedule based on config.
+
+        Returns:
+            Learning rate schedule function or constant value.
+        """
+        if not HAS_NATIVE_TRAINING:
+            return self.learning_rate
+
+        if self.lr_scheduler_type == "cosine":
+            return optim.cosine_decay(
+                init=self.learning_rate,
+                decay_steps=self.iters,
+            )
+        elif self.lr_scheduler_type == "linear":
+            return optim.linear_schedule(
+                init=self.learning_rate,
+                end=0.0,
+                steps=self.iters,
+            )
+        elif self.lr_scheduler_type == "constant":
+            return self.learning_rate
+        else:
+            # Default to cosine
+            return optim.cosine_decay(
+                init=self.learning_rate,
+                decay_steps=self.iters,
+            )
+
+    def _should_use_grad_checkpoint(self) -> bool:
+        """
+        Determine if gradient checkpointing should be enabled.
+
+        Returns:
+            True if gradient checkpointing should be used.
+        """
+        # Check explicit config
+        if self.grad_checkpoint:
+            return True
+
+        # Check model's LoRA config
+        if hasattr(self.model, 'lora_config') and self.model.lora_config:
+            gc = self.model.lora_config.get('use_gradient_checkpointing', False)
+            if gc == "unsloth" or gc is True:
+                return True
+
+        return False
 
     def _prepare_training_data(self) -> str:
         """Prepare training data in MLX-LM compatible format."""
@@ -313,16 +405,161 @@ class SFTTrainer:
         # Return directory path (not file path)
         return str(self.output_dir)
 
-    def train(self):
+    def train(self, use_native: Optional[bool] = None):
         """
         Train the model using MLX-LM.
 
-        This method prepares the data and runs MLX-LM's LoRA training.
+        This method supports two training modes:
+        1. Native MLX training (recommended) - Uses mlx_lm.tuner.train() directly
+        2. Subprocess training (fallback) - Calls mlx_lm.lora CLI
+
+        Args:
+            use_native: Override for native training. If None, uses config value.
+
+        Returns:
+            Training result object.
         """
+        # Determine training mode
+        if use_native is None:
+            use_native = self.use_native_training
 
         print("=" * 70)
         print("Starting Fine-Tuning")
         print("=" * 70)
+
+        if use_native and HAS_NATIVE_TRAINING:
+            return self._train_native()
+        else:
+            if use_native and not HAS_NATIVE_TRAINING:
+                warnings.warn(
+                    "Native training requested but mlx_lm.tuner not available. "
+                    "Falling back to subprocess training. "
+                    "Install with: pip install 'mlx-lm[train]'",
+                    UserWarning
+                )
+            return self._train_subprocess()
+
+    def _train_native(self):
+        """
+        Train using native MLX training loop.
+
+        This is the recommended training method that provides:
+        - Direct control over the training process
+        - Custom loss functions (for DPO, GRPO, etc.)
+        - Better error handling and debugging
+        """
+        print("\n[Using Native MLX Training]")
+
+        # Step 1: Apply LoRA to model if not already done
+        if hasattr(self.model, '_apply_lora') and not self.model._lora_applied:
+            print("\nApplying LoRA adapters...")
+            self.model._apply_lora(num_layers=self.num_layers)
+
+        # Step 2: Set adapter path on model for later saving
+        if hasattr(self.model, 'set_adapter_path'):
+            self.model.set_adapter_path(str(self.adapter_path))
+
+        # Step 3: Prepare training data
+        data_dir = self._prepare_training_data()
+
+        # Step 4: Create learning rate schedule
+        lr_schedule = self._get_lr_schedule()
+
+        # Step 5: Create optimizer
+        optimizer = optim.AdamW(
+            learning_rate=lr_schedule,
+            weight_decay=self.weight_decay,
+        )
+
+        # Step 6: Create training args
+        adapter_file = str(self.adapter_path / "adapters.safetensors")
+        training_args = TrainingArgs(
+            batch_size=self.batch_size,
+            iters=self.iters,
+            val_batches=25,
+            steps_per_report=self.logging_steps,
+            steps_per_eval=max(self.save_steps, 100),
+            steps_per_save=self.save_steps,
+            max_seq_length=self.max_seq_length,
+            adapter_file=adapter_file,
+            grad_checkpoint=self._should_use_grad_checkpoint(),
+        )
+
+        print(f"\nTraining configuration:")
+        print(f"  Iterations: {self.iters}")
+        print(f"  Batch size: {self.batch_size}")
+        print(f"  Learning rate: {self.learning_rate}")
+        print(f"  LR scheduler: {self.lr_scheduler_type}")
+        print(f"  Grad checkpoint: {training_args.grad_checkpoint}")
+        print(f"  Adapter file: {adapter_file}")
+        print()
+
+        # Step 7: Load datasets using mlx_lm dataset utilities
+        # mlx_load_dataset expects an args object with specific attributes
+        dataset_args = types.SimpleNamespace(
+            data=data_dir,
+            train=True,
+            test=False,
+            hf_dataset=None,
+            mask_prompt=False,
+        )
+
+        try:
+            train_set, valid_set, _ = mlx_load_dataset(
+                args=dataset_args,
+                tokenizer=self.tokenizer,
+            )
+            # Wrap datasets in CacheDataset for proper iteration
+            # CacheDataset processes items lazily and caches the results
+            train_set = CacheDataset(train_set)
+            valid_set = CacheDataset(valid_set)
+            print(f"Loaded {len(train_set)} training samples, {len(valid_set)} validation samples")
+        except Exception as e:
+            print(f"Error loading dataset: {e}")
+            print("Falling back to subprocess training...")
+            return self._train_subprocess()
+
+        # Step 8: Get the actual model to train
+        # MLXModelWrapper wraps the actual model
+        actual_model = self.model.model if hasattr(self.model, 'model') else self.model
+
+        # Step 9: Run training
+        try:
+            print("Starting training loop...")
+            mlx_train(
+                model=actual_model,
+                optimizer=optimizer,
+                train_dataset=train_set,
+                val_dataset=valid_set,
+                args=training_args,
+            )
+
+            print("\n" + "=" * 70)
+            print("Training Complete!")
+            print("=" * 70)
+            print(f"  Adapters saved to: {self.adapter_path}")
+
+            return {"status": "success", "adapter_path": str(self.adapter_path)}
+
+        except Exception as e:
+            print(f"\nNative training failed: {e}")
+            print("Falling back to subprocess training...")
+            return self._train_subprocess()
+
+    def _train_subprocess(self):
+        """
+        Train using subprocess call to mlx_lm.lora CLI.
+
+        This is the fallback training method for compatibility.
+        """
+        if self.use_native_training:
+            warnings.warn(
+                "Subprocess training is deprecated and will be removed in v0.4.0. "
+                "Use native training (default) for better performance.",
+                DeprecationWarning
+            )
+
+        print("\n[Using Subprocess Training (Legacy)]")
 
         # Prepare training data
         data_dir = self._prepare_training_data()
@@ -330,33 +567,52 @@ class SFTTrainer:
         # Get model name
         model_name = self.model.model_name if hasattr(self.model, 'model_name') else "model"
 
+        # Create config file for LoRA settings (mlx_lm.lora uses config file for LoRA params)
+        config_file = self.output_dir / "lora_config.yaml"
+        lora_config = {
+            "lora_parameters": {
+                "rank": self.lora_r,
+                "alpha": self.lora_alpha,
+                "dropout": self.lora_dropout,
+                "scale": self.lora_alpha / self.lora_r,
+            }
+        }
+
+        with open(config_file, 'w') as f:
+            yaml.dump(lora_config, f)
+
+        print(f"Created LoRA config: {config_file}")
+
         # Build MLX-LM training command
+        # Note: LoRA rank/alpha are set via config file, not CLI args
         cmd = [
             "mlx_lm.lora",
             "--model", model_name,
             "--train",
-            "--data", data_dir,  # Pass directory, not file
+            "--data", data_dir,
             "--iters", str(self.iters),
             "--learning-rate", str(self.learning_rate),
             "--batch-size", str(self.batch_size),
-            "--num-layers", str(self.lora_r),  # Number of layers to fine-tune
             "--adapter-path", str(self.adapter_path),
+            "-c", str(config_file),  # Config file for LoRA settings
         ]
+
+        # Add num-layers if specified (how many layers to apply LoRA to)
+        if self.num_layers:
+            cmd.extend(["--num-layers", str(self.num_layers)])
+
+        # Note: mlx_lm.lora doesn't support --warmup, warmup is handled internally
 
         # Add optional arguments
         if self.save_steps:
             cmd.extend(["--save-every", str(self.save_steps)])
 
+        # Add gradient checkpointing if enabled
+        if self._should_use_grad_checkpoint():
+            cmd.append("--grad-checkpoint")
+
         if self.eval_dataset:
-            # Prepare eval data
-            eval_file = self.output_dir / "valid.jsonl"
-            with open(eval_file, 'w') as f:
-                for sample in self.eval_dataset:
-                    if 'messages' in sample:
-                        f.write(json.dumps({"messages": sample['messages']}) + '\n')
-                    elif 'text' in sample:
-                        f.write(json.dumps({"text": sample['text']}) + '\n')
-            cmd.extend(["--test"])
+            cmd.append("--test")
 
         print(f"\nRunning training command:")
         print(" ".join(cmd))
@@ -367,9 +623,13 @@ class SFTTrainer:
             result = subprocess.run(
                 cmd,
                 check=True,
-                capture_output=False,  # Show output in real-time
+                capture_output=False,
                 text=True
             )
+
+            # Set adapter path on model for later saving
+            if hasattr(self.model, 'set_adapter_path'):
+                self.model.set_adapter_path(str(self.adapter_path))
 
             print("\n" + "=" * 70)
             print("Training Complete!")

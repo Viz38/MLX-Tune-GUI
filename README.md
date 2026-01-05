@@ -59,14 +59,17 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚧 **Building in Public** - Core features work, advanced features in progress.
+> 🚀 **v0.3.0** - Native training with proper RL losses!
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| SFT Training | ✅ Stable | Full LoRA fine-tuning |
+| SFT Training | ✅ Stable | Native MLX training |
 | Model Loading | ✅ Stable | Any HuggingFace model |
 | Save/Export | ✅ Stable | HF format, GGUF |
-| DPO/ORPO/GRPO | ⚠️ Beta | API ready, full loss coming |
+| DPO Training | ✅ Stable | **Full DPO loss** |
+| ORPO Training | ✅ Stable | **Full ORPO loss** |
+| GRPO Training | ✅ Stable | **Multi-generation + reward** |
+| KTO/SimPO | ✅ Stable | Proper loss implementations |
 | Vision Models | ⚠️ Beta | Via mlx-vlm |
 | PyPI Package | 🔜 Soon | Install from source for now |
 
@@ -123,14 +126,14 @@ model.save_pretrained_gguf("model", tokenizer, quantization_method="q4_k_m")  # 
 
 ## Supported Training Methods
 
-| Method | Trainer | Status | Use Case |
-|--------|---------|--------|----------|
-| **SFT** | `SFTTrainer` | ✅ Stable | Instruction fine-tuning |
-| **DPO** | `DPOTrainer` | ⚠️ Beta | Preference learning |
-| **ORPO** | `ORPOTrainer` | ⚠️ Beta | Combined SFT + preference |
-| **GRPO** | `GRPOTrainer` | ⚠️ Beta | Reasoning (DeepSeek R1 style) |
-| **KTO** | `KTOTrainer` | ⚠️ Beta | Kahneman-Tversky optimization |
-| **SimPO** | `SimPOTrainer` | ⚠️ Beta | Simple preference optimization |
+| Method | Trainer | Implementation | Use Case |
+|--------|---------|----------------|----------|
+| **SFT** | `SFTTrainer` | ✅ Native MLX | Instruction fine-tuning |
+| **DPO** | `DPOTrainer` | ✅ Native MLX | Preference learning (proper log-prob loss) |
+| **ORPO** | `ORPOTrainer` | ✅ Native MLX | Combined SFT + odds ratio preference |
+| **GRPO** | `GRPOTrainer` | ✅ Native MLX | Reasoning with multi-generation (DeepSeek R1 style) |
+| **KTO** | `KTOTrainer` | ✅ Native MLX | Kahneman-Tversky optimization |
+| **SimPO** | `SimPOTrainer` | ✅ Native MLX | Simple preference optimization |
 | **VLM** | `VLMSFTTrainer` | ⚠️ Beta | Vision-Language models |
 
 ## Examples
@@ -160,10 +163,11 @@ Check [`examples/`](examples/) for working code:
 ## Contributing
 
 Contributions welcome! Areas that need help:
-- Full RL loss implementations (DPO, GRPO)
-- Custom MLX kernels for performance
+- Custom MLX kernels for even faster training
+- More comprehensive test coverage
 - Documentation and examples
-- Testing on different M-series chips
+- Testing on different M-series chips (M1, M2, M3, M4, M5)
+- VLM training improvements
 
 ## License
 

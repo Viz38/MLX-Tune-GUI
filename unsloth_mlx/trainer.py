@@ -278,59 +278,97 @@ def export_to_gguf(
     model_path: str,
     output_path: Optional[str] = None,
     quantization: str = "q4_k_m",
+    adapter_path: Optional[str] = None,
     **kwargs
 ):
     """
     Export model to GGUF format for use with llama.cpp, Ollama, etc.
 
+    This function uses mlx_lm.fuse to merge adapters (if any) and export to GGUF.
+
     Args:
-        model_path: Path to the saved model
+        model_path: Path to the base model or HuggingFace model ID
         output_path: Path for output GGUF file (defaults to model_path/model.gguf)
-        quantization: Quantization type (q4_k_m, q5_k_m, q8_0, etc.)
+        quantization: Quantization type (q4_k_m, q5_k_m, q8_0, f16, etc.)
+        adapter_path: Path to LoRA adapters to fuse before export
         **kwargs: Additional export options
 
     Examples:
-        >>> # Export to GGUF
-        >>> export_to_gguf("my-finetuned-model")
+        >>> # Export base model to GGUF
+        >>> export_to_gguf("mlx-community/Llama-3.2-1B-Instruct-4bit")
         >>>
-        >>> # Export with specific quantization
+        >>> # Export fine-tuned model with adapters
         >>> export_to_gguf(
-        ...     "my-finetuned-model",
-        ...     output_path="model-q8.gguf",
-        ...     quantization="q8_0"
+        ...     "mlx-community/Llama-3.2-1B-Instruct-4bit",
+        ...     adapter_path="./adapters",
+        ...     output_path="my-model.gguf",
         ... )
     """
+    import subprocess
 
-    model_path = Path(model_path)
+    model_path = Path(model_path) if not model_path.startswith(('mlx-', 'meta-', 'mistral')) else model_path
     if output_path is None:
-        output_path = model_path / "model.gguf"
+        if isinstance(model_path, Path):
+            output_path = model_path / "model.gguf"
+        else:
+            output_path = Path("./model.gguf")
     else:
         output_path = Path(output_path)
 
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     print(f"Exporting model to GGUF format...")
-    print(f"  Input: {model_path}")
+    print(f"  Model: {model_path}")
     print(f"  Output: {output_path}")
-    print(f"  Quantization: {quantization}")
+    if adapter_path:
+        print(f"  Adapters: {adapter_path}")
+
+    # Build mlx_lm.fuse command
+    cmd = [
+        "mlx_lm.fuse",
+        "--model", str(model_path),
+        "--export-gguf",
+        "--gguf-path", str(output_path),
+    ]
+
+    # Add adapter path if provided
+    if adapter_path:
+        cmd.extend(["--adapter-path", str(adapter_path)])
+
+    # Add de-quantize flag for better quality (optional)
+    if kwargs.get('de_quantize', False):
+        cmd.append("--de-quantize")
+
+    print(f"\nRunning: {' '.join(cmd)}")
 
     try:
-        from mlx_lm import convert
-
-        # Use mlx_lm's GGUF export
-        convert(
-            str(model_path),
-            quantize=quantization,
-            gguf_path=str(output_path),
-            **kwargs
-        )
-
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
         print(f"✓ Model exported to {output_path}")
         return str(output_path)
 
-    except Exception as e:
-        print(f"Error exporting to GGUF: {e}")
-        print("Alternative: Use mlx_lm.convert from command line:")
-        print(f"  mlx_lm.convert --hf-path {model_path} --export-gguf")
-        raise
+    except subprocess.CalledProcessError as e:
+        print(f"Error during GGUF export: {e}")
+        if e.stderr:
+            print(f"stderr: {e.stderr}")
+
+        # Try alternative method using convert
+        print("\nTrying alternative export method...")
+        try:
+            alt_cmd = [
+                "mlx_lm.convert",
+                "--hf-path", str(model_path),
+                "-q",  # Quantize
+                "--export-gguf",
+            ]
+            subprocess.run(alt_cmd, check=True)
+            print(f"✓ Model exported using alternative method")
+            return str(output_path)
+        except Exception as alt_e:
+            print(f"Alternative method also failed: {alt_e}")
+            print("\nManual export command:")
+            print(f"  mlx_lm.fuse --model {model_path} --export-gguf --gguf-path {output_path}")
+            raise
 
 
 def get_training_config(
