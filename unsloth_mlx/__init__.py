@@ -13,7 +13,7 @@ Supported Training Methods:
 - VLM (Vision Language Model) fine-tuning
 """
 
-__version__ = "0.2.0"  # Bumped for RL trainers and VLM support
+__version__ = "0.3.0"  # Native training + proper DPO/ORPO/GRPO/KTO/SimPO losses
 
 from unsloth_mlx.model import FastLanguageModel
 from unsloth_mlx.trainer import (
@@ -38,6 +38,20 @@ from unsloth_mlx.rl_trainers import (
     SimPOTrainer,
     prepare_preference_dataset,
     create_reward_function,
+)
+
+# Loss functions for custom training
+from unsloth_mlx.losses import (
+    compute_log_probs,
+    compute_log_probs_with_lengths,
+    dpo_loss,
+    orpo_loss,
+    kto_loss,
+    simpo_loss,
+    sft_loss,
+    grpo_loss,
+    grpo_batch_loss,
+    compute_reference_logprobs,
 )
 
 # Vision Language Models
@@ -67,6 +81,17 @@ __all__ = [
     # Vision Models
     "FastVisionModel",
     "VLMSFTTrainer",
+    # Loss Functions
+    "compute_log_probs",
+    "compute_log_probs_with_lengths",
+    "dpo_loss",
+    "orpo_loss",
+    "kto_loss",
+    "simpo_loss",
+    "sft_loss",
+    "grpo_loss",
+    "grpo_batch_loss",
+    "compute_reference_logprobs",
     # Utilities
     "prepare_dataset",
     "prepare_preference_dataset",

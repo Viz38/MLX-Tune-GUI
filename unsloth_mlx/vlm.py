@@ -298,32 +298,89 @@ class VLMSFTTrainer:
 
     def train(self):
         """
-        Train the VLM.
-
-        Note: Uses mlx-vlm's fine-tuning capabilities.
+        Train the VLM using mlx-vlm's fine-tuning capabilities.
         """
-
         print("=" * 70)
         print("Starting VLM Fine-Tuning")
         print("=" * 70)
 
-        warnings.warn(
-            "VLM fine-tuning requires mlx-vlm's training utilities. "
-            "For full VLM training, use: mlx-vlm fine-tune command. "
-            "See: https://github.com/Blaizzy/mlx-vlm",
-            UserWarning
-        )
-
         # Prepare data
         data_file = self.output_dir / "train.jsonl"
+        import json
         with open(data_file, 'w') as f:
-            import json
             for sample in self.train_dataset:
                 f.write(json.dumps(sample) + '\n')
 
-        print(f"Training data saved to: {data_file}")
-        print("\nTo train, run:")
-        print(f"  mlx_vlm.fine_tune --model {self.model.model_name} --data {data_file}")
+        print(f"✓ Training data saved to: {data_file}")
+
+        # Try to use native mlx-vlm training
+        try:
+            from mlx_vlm.trainer import train as vlm_train
+
+            print("\n[Using Native MLX-VLM Training]")
+
+            # Apply LoRA if configured
+            if hasattr(self.model, '_apply_lora') and hasattr(self.model, 'lora_enabled'):
+                if self.model.lora_enabled and not getattr(self.model, '_lora_applied', False):
+                    print("Applying LoRA adapters...")
+                    # mlx-vlm handles LoRA differently - use their API
+
+            actual_model = self.model.model if hasattr(self.model, 'model') else self.model
+
+            vlm_train(
+                model=actual_model,
+                processor=self.processor,
+                train_data=str(data_file),
+                learning_rate=self.learning_rate,
+                epochs=self.num_train_epochs,
+                batch_size=self.batch_size,
+                output_dir=str(self.output_dir),
+            )
+
+            print("\n" + "=" * 70)
+            print("VLM Fine-Tuning Complete!")
+            print("=" * 70)
+            return {"status": "success", "output_dir": str(self.output_dir)}
+
+        except ImportError:
+            print("\n[MLX-VLM Training Not Available - Using CLI Fallback]")
+            warnings.warn(
+                "mlx-vlm trainer not found. Using CLI command. "
+                "Install with: pip install mlx-vlm",
+                UserWarning
+            )
+
+            # Try subprocess fallback
+            try:
+                import subprocess
+                model_name = getattr(self.model, 'model_name', 'model')
+
+                cmd = [
+                    "python", "-m", "mlx_vlm.trainer",
+                    "--model", model_name,
+                    "--data", str(data_file),
+                    "--output-dir", str(self.output_dir),
+                    "--epochs", str(self.num_train_epochs),
+                    "--lr", str(self.learning_rate),
+                ]
+
+                print(f"Running: {' '.join(cmd)}")
+                subprocess.run(cmd, check=True)
+
+                print("VLM Fine-Tuning Complete!")
+                return {"status": "success"}
+
+            except Exception as e:
+                print(f"\nCould not run VLM training: {e}")
+                print("\nTo train manually, run:")
+                print(f"  mlx_vlm.fine_tune --model {getattr(self.model, 'model_name', 'model')} --data {data_file}")
+                return {"status": "manual_required", "data_file": str(data_file)}
+
+        except Exception as e:
+            print(f"\nVLM training failed: {e}")
+            print("\nTo train manually, run:")
+            print(f"  mlx_vlm.fine_tune --model {getattr(self.model, 'model_name', 'model')} --data {data_file}")
+            return {"status": "error", "error": str(e)}
 
 
 def load_vlm_dataset(

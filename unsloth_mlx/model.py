@@ -5,10 +5,23 @@ This module provides Unsloth-compatible API for loading and configuring language
 using Apple's MLX framework under the hood.
 """
 
-from typing import Optional, Tuple, Union, List, Any
+from typing import Optional, Tuple, Union, List, Any, Dict
+from pathlib import Path
 import mlx.core as mx
 from mlx_lm import load as mlx_load
 import warnings
+
+# Try to import mlx_lm tuner utilities for native LoRA support
+try:
+    from mlx_lm.tuner.utils import linear_to_lora_layers
+    HAS_MLX_LM_TUNER = True
+except ImportError:
+    HAS_MLX_LM_TUNER = False
+    warnings.warn(
+        "mlx_lm.tuner not available. Install with: pip install 'mlx-lm[train]'. "
+        "Native LoRA application will not work.",
+        ImportWarning
+    )
 
 
 class FastLanguageModel:
@@ -298,6 +311,10 @@ class MLXModelWrapper:
         # LoRA configuration
         self.lora_config = None
         self.lora_enabled = False
+        self._lora_applied = False  # Track if LoRA has been applied to model layers
+
+        # Adapter path tracking
+        self._adapter_path: Optional[Path] = None
 
         # Inference mode flag
         self.inference_mode = False
@@ -338,10 +355,141 @@ class MLXModelWrapper:
             **kwargs
         }
         self.lora_enabled = True
+        self._lora_applied = False  # Reset - needs to be applied again
 
         # Store for later use in training
         print(f"LoRA configuration set: rank={r}, alpha={lora_alpha}, "
               f"modules={target_modules}, dropout={lora_dropout}")
+
+    def _apply_lora(self, num_layers: Optional[int] = None) -> bool:
+        """
+        Apply LoRA adapters to model layers using mlx_lm's native API.
+
+        This method actually modifies the model's layers to include LoRA adapters.
+        It should be called before training starts.
+
+        Args:
+            num_layers: Number of transformer layers to apply LoRA to.
+                       If None, applies to all layers.
+
+        Returns:
+            True if LoRA was applied, False if already applied or not enabled.
+
+        Raises:
+            RuntimeError: If mlx_lm.tuner is not available.
+        """
+        if not self.lora_enabled:
+            print("LoRA not configured. Call configure_lora() first.")
+            return False
+
+        if self._lora_applied:
+            print("LoRA already applied to model layers.")
+            return False
+
+        if not HAS_MLX_LM_TUNER:
+            raise RuntimeError(
+                "mlx_lm.tuner is not available. Install with: pip install 'mlx-lm[train]'"
+            )
+
+        # Determine number of layers
+        if num_layers is None:
+            # Try to detect from model structure
+            if hasattr(self.model, 'layers'):
+                num_layers = len(self.model.layers)
+            elif hasattr(self.model, 'model') and hasattr(self.model.model, 'layers'):
+                num_layers = len(self.model.model.layers)
+            else:
+                num_layers = 16  # Default fallback
+
+        # Convert lora_alpha to scale: scale = alpha / r
+        r = self.lora_config['r']
+        lora_alpha = self.lora_config['lora_alpha']
+        scale = lora_alpha / r
+
+        # Build mlx_lm LoRA config
+        mlx_lora_config = {
+            "rank": r,
+            "scale": scale,
+            "dropout": self.lora_config.get('lora_dropout', 0.0),
+        }
+
+        # Convert target module short names to full paths
+        # Unsloth uses short names like 'q_proj', but mlx_lm needs full paths like 'self_attn.q_proj'
+        target_modules = self.lora_config.get('target_modules', [])
+        if target_modules:
+            # Map short names to full paths based on common LLM architectures
+            short_to_full = {
+                'q_proj': 'self_attn.q_proj',
+                'k_proj': 'self_attn.k_proj',
+                'v_proj': 'self_attn.v_proj',
+                'o_proj': 'self_attn.o_proj',
+                'gate_proj': 'mlp.gate_proj',
+                'up_proj': 'mlp.up_proj',
+                'down_proj': 'mlp.down_proj',
+                # Also support already-full paths
+                'self_attn.q_proj': 'self_attn.q_proj',
+                'self_attn.k_proj': 'self_attn.k_proj',
+                'self_attn.v_proj': 'self_attn.v_proj',
+                'self_attn.o_proj': 'self_attn.o_proj',
+                'mlp.gate_proj': 'mlp.gate_proj',
+                'mlp.up_proj': 'mlp.up_proj',
+                'mlp.down_proj': 'mlp.down_proj',
+            }
+            full_paths = []
+            for module in target_modules:
+                if module in short_to_full:
+                    full_paths.append(short_to_full[module])
+                else:
+                    # Assume it's already a full path or custom module
+                    full_paths.append(module)
+            mlx_lora_config["keys"] = full_paths
+
+        # Check for DoRA
+        use_dora = self.lora_config.get('use_dora', False)
+
+        print(f"Applying LoRA to {num_layers} layers: {mlx_lora_config}")
+
+        # CRITICAL: Freeze base model first, then apply LoRA
+        # This ensures only LoRA parameters are trainable
+        self.model.freeze()
+
+        # Apply LoRA using mlx_lm utility
+        # This creates LoRALinear layers which are unfrozen by default
+        linear_to_lora_layers(
+            model=self.model,
+            num_layers=num_layers,
+            config=mlx_lora_config,
+            use_dora=use_dora,
+        )
+
+        self._lora_applied = True
+
+        # Verify trainable parameters
+        from mlx.utils import tree_flatten
+        trainable = tree_flatten(self.model.trainable_parameters())
+        lora_params = [k for k, _ in trainable if 'lora' in k]
+        print(f"✓ LoRA applied successfully to {num_layers} layers")
+        print(f"  Trainable LoRA parameters: {len(lora_params)}")
+
+        return True
+
+    def set_adapter_path(self, path: str) -> None:
+        """
+        Set the path where adapters will be saved/loaded.
+
+        Args:
+            path: Path to adapter directory or file.
+        """
+        self._adapter_path = Path(path)
+
+    def get_adapter_path(self) -> Optional[Path]:
+        """
+        Get the current adapter path.
+
+        Returns:
+            Path to adapters, or None if not set.
+        """
+        return self._adapter_path
 
     def enable_inference_mode(self, use_cache: bool = True):
         """
@@ -419,23 +567,48 @@ class MLXModelWrapper:
         Example:
             >>> model.save_pretrained("lora_model")
         """
-        from pathlib import Path
-        from mlx_lm.utils import save_adapters
+        import shutil
 
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
         print(f"Saving LoRA adapters to {output_dir}...")
 
-        # Save adapters
-        # Note: Assumes adapters are in the standard location after training
-        import shutil
-        adapter_file = Path("./adapters/adapters.safetensors")
-        if adapter_file.exists():
+        # Check for adapter file in tracked path first, then fallback locations
+        adapter_locations = []
+
+        # 1. Tracked adapter path (set by trainer)
+        if self._adapter_path:
+            if self._adapter_path.is_file():
+                adapter_locations.append(self._adapter_path)
+            else:
+                adapter_locations.append(self._adapter_path / "adapters.safetensors")
+
+        # 2. Fallback: common locations
+        adapter_locations.extend([
+            Path("./adapters/adapters.safetensors"),
+            Path("./lora_finetuned/adapters/adapters.safetensors"),
+            Path("./outputs/adapters/adapters.safetensors"),
+        ])
+
+        # Find first existing adapter file
+        adapter_file = None
+        for loc in adapter_locations:
+            if loc.exists():
+                adapter_file = loc
+                break
+
+        if adapter_file and adapter_file.exists():
             shutil.copy(adapter_file, output_dir / "adapters.safetensors")
             print(f"✓ Adapters saved to {output_dir}")
+
+            # Also copy adapter config if it exists
+            config_file = adapter_file.parent / "adapter_config.json"
+            if config_file.exists():
+                shutil.copy(config_file, output_dir / "adapter_config.json")
         else:
-            print(f"⚠️  No adapters found at {adapter_file}")
+            searched = [str(loc) for loc in adapter_locations[:3]]
+            print(f"⚠️  No adapters found. Searched: {searched}")
             print("   Train the model first with SFTTrainer")
 
     def save_pretrained_merged(
