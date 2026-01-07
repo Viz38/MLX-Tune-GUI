@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="unsloth_mlx_logo_f.png" alt="Unsloth-MLX Logo" width="200"/>
+  <img src="https://raw.githubusercontent.com/ARahim3/unsloth-mlx/main/unsloth_mlx_logo_f.png" alt="Unsloth-MLX Logo" width="200"/>
 </p>
 <h1 align="center">Unsloth-MLX</h1>
 
@@ -70,7 +70,7 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.3.0** - Native training with proper RL losses!
+> 🚀 **v0.3.1** - Chat templates + response-only training!
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -81,24 +81,24 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 | ORPO Training | ✅ Stable | **Full ORPO loss** |
 | GRPO Training | ✅ Stable | **Multi-generation + reward** |
 | KTO/SimPO | ✅ Stable | Proper loss implementations |
+| **Chat Templates** | ✅ **NEW** | 15 models (llama, gemma, qwen, phi, mistral) |
+| **Response-Only Training** | ✅ **NEW** | `train_on_responses_only()` |
 | Vision Models | ⚠️ Beta | Via mlx-vlm |
-| PyPI Package | 🔜 Soon | Install from source for now |
+| PyPI Package | ✅ Available | `uv pip install unsloth-mlx` |
 
 ## Installation
 
 ```bash
-# From source (recommended for now)
-git clone https://github.com/ARahim3/unsloth-mlx.git
-cd unsloth-mlx
-
 # Using uv (recommended - faster and more reliable)
-uv pip install -e .
+uv pip install unsloth-mlx
 
 # Or using pip
-pip install -e .
+pip install unsloth-mlx
 
-# PyPI coming soon!
-# uv pip install unsloth-mlx
+# From source (for development)
+git clone https://github.com/ARahim3/unsloth-mlx.git
+cd unsloth-mlx
+uv pip install -e .
 ```
 
 ## Quick Start
@@ -143,6 +143,25 @@ trainer.train()
 model.save_pretrained("lora_model")  # Adapters only
 model.save_pretrained_merged("merged", tokenizer)  # Full model
 model.save_pretrained_gguf("model", tokenizer, quantization_method="q4_k_m")  # GGUF
+```
+
+### Chat Templates & Response-Only Training
+
+```python
+from unsloth_mlx import get_chat_template, train_on_responses_only
+
+# Apply chat template (supports llama-3, gemma, qwen, phi, mistral, etc.)
+tokenizer = get_chat_template(tokenizer, chat_template="llama-3")
+
+# Or auto-detect from model name
+tokenizer = get_chat_template(tokenizer, chat_template="auto")
+
+# Train only on responses (not prompts) - more efficient!
+trainer = train_on_responses_only(
+    trainer,
+    instruction_part="<|start_header_id|>user<|end_header_id|>\n\n",
+    response_part="<|start_header_id|>assistant<|end_header_id|>\n\n",
+)
 ```
 
 ## Supported Training Methods

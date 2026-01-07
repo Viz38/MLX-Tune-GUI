@@ -16,6 +16,19 @@ from unsloth_mlx.chat_templates import (
     alpaca_to_text,
     ALPACA_TEMPLATE,
     ALPACA_TEMPLATE_NO_INPUT,
+    # New chat template functions
+    get_chat_template,
+    list_chat_templates,
+    get_template_info,
+    get_template_for_model,
+    CHAT_TEMPLATES,
+    TEMPLATE_ALIASES,
+    DEFAULT_SYSTEM_MESSAGES,
+    ChatTemplateEntry,
+    # Response-only training functions
+    train_on_responses_only,
+    _get_template_parts,
+    get_response_template_ids,
 )
 
 
@@ -278,6 +291,492 @@ class TestImports:
         assert callable(convert_to_mlx_format)
         assert callable(get_formatting_func)
         assert callable(alpaca_to_text)
+
+    def test_imports_chat_template_functions(self):
+        """Test importing new chat template functions from main package."""
+        from unsloth_mlx import (
+            get_chat_template,
+            list_chat_templates,
+            get_template_info,
+            get_template_for_model,
+            CHAT_TEMPLATES,
+            TEMPLATE_ALIASES,
+            DEFAULT_SYSTEM_MESSAGES,
+            ChatTemplateEntry,
+        )
+
+        # All should be callable or proper types
+        assert callable(get_chat_template)
+        assert callable(list_chat_templates)
+        assert callable(get_template_info)
+        assert callable(get_template_for_model)
+        assert isinstance(CHAT_TEMPLATES, dict)
+        assert isinstance(TEMPLATE_ALIASES, dict)
+        assert isinstance(DEFAULT_SYSTEM_MESSAGES, dict)
+
+
+# =============================================================================
+# TESTS FOR GET_CHAT_TEMPLATE (Phase 1.1)
+# =============================================================================
+
+class TestChatTemplateRegistry:
+    """Test the CHAT_TEMPLATES registry."""
+
+    def test_registry_has_required_templates(self):
+        """Verify all 15 required templates are present."""
+        required_templates = [
+            "llama-3", "llama-3.1",
+            "chatml",
+            "gemma-2", "gemma-3",
+            "qwen-2.5", "qwen-3",
+            "phi-3", "phi-3.5", "phi-4",
+            "mistral", "mistral-nemo",
+            "deepseek-v2",
+            "alpaca", "vicuna", "zephyr",
+        ]
+        for template in required_templates:
+            assert template in CHAT_TEMPLATES, f"Missing template: {template}"
+
+    def test_registry_entries_are_valid(self):
+        """Verify all registry entries have required fields."""
+        for name, entry in CHAT_TEMPLATES.items():
+            assert isinstance(entry, ChatTemplateEntry), f"{name} is not ChatTemplateEntry"
+            assert isinstance(entry.template, str), f"{name} template is not str"
+            assert len(entry.template) > 0, f"{name} has empty template"
+            assert isinstance(entry.eos_token, str), f"{name} eos_token is not str"
+            assert isinstance(entry.bos_token, str), f"{name} bos_token is not str"
+            assert isinstance(entry.stop_token, str), f"{name} stop_token is not str"
+
+    def test_template_aliases_resolve(self):
+        """Test that aliases resolve to valid templates."""
+        for alias, target in TEMPLATE_ALIASES.items():
+            assert target in CHAT_TEMPLATES, f"Alias '{alias}' points to non-existent '{target}'"
+
+
+class TestListChatTemplates:
+    """Test list_chat_templates function."""
+
+    def test_returns_sorted_list(self):
+        """Verify list is sorted alphabetically."""
+        templates = list_chat_templates()
+        assert templates == sorted(templates)
+
+    def test_returns_all_templates(self):
+        """Verify all templates are listed."""
+        templates = list_chat_templates()
+        assert len(templates) == len(CHAT_TEMPLATES)
+        for name in CHAT_TEMPLATES.keys():
+            assert name in templates
+
+
+class TestGetTemplateInfo:
+    """Test get_template_info function."""
+
+    def test_get_llama3_info(self):
+        """Test getting llama-3 template info."""
+        info = get_template_info("llama-3")
+        assert info["name"] == "llama-3"
+        assert info["eos_token"] == "<|eot_id|>"
+        assert info["bos_token"] == "<|begin_of_text|>"
+        assert info["stop_token"] == "<|eot_id|>"
+        assert "template_preview" in info
+
+    def test_get_chatml_info(self):
+        """Test getting chatml template info."""
+        info = get_template_info("chatml")
+        assert info["name"] == "chatml"
+        assert info["eos_token"] == "<|im_end|>"
+
+    def test_alias_resolves(self):
+        """Test that alias is resolved in info."""
+        info = get_template_info("llama3")  # alias
+        assert info["name"] == "llama-3"
+
+    def test_unknown_template_raises(self):
+        """Test that unknown template raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown chat template"):
+            get_template_info("nonexistent-template")
+
+
+class TestGetTemplateForModel:
+    """Test get_template_for_model function."""
+
+    def test_detect_llama3(self):
+        """Test detection of Llama 3 models."""
+        assert get_template_for_model("meta-llama/Llama-3-8B-Instruct") == "llama-3"
+        assert get_template_for_model("mlx-community/Llama-3.2-1B-Instruct-4bit") == "llama-3.1"
+        assert get_template_for_model("mlx-community/Llama-3.3-70B-Instruct-4bit") == "llama-3.1"
+
+    def test_detect_gemma(self):
+        """Test detection of Gemma models."""
+        assert get_template_for_model("google/gemma-2-9b-it") == "gemma-2"
+        assert get_template_for_model("google/gemma-3-27b-it") == "gemma-3"
+
+    def test_detect_qwen(self):
+        """Test detection of Qwen models."""
+        assert get_template_for_model("Qwen/Qwen2.5-7B-Instruct") == "qwen-2.5"
+        assert get_template_for_model("Qwen/Qwen3-8B") == "qwen-3"
+
+    def test_detect_phi(self):
+        """Test detection of Phi models."""
+        assert get_template_for_model("microsoft/Phi-3-mini-4k-instruct") == "phi-3"
+        assert get_template_for_model("microsoft/phi-3.5-mini-instruct") == "phi-3.5"
+        assert get_template_for_model("microsoft/phi-4") == "phi-4"
+
+    def test_detect_mistral(self):
+        """Test detection of Mistral models."""
+        assert get_template_for_model("mistralai/Mistral-7B-Instruct-v0.3") == "mistral"
+        assert get_template_for_model("mistralai/Mistral-Nemo-Instruct-2407") == "mistral-nemo"
+
+    def test_detect_deepseek(self):
+        """Test detection of DeepSeek models."""
+        assert get_template_for_model("deepseek-ai/DeepSeek-V2-Chat") == "deepseek-v2"
+
+    def test_default_to_chatml(self):
+        """Test that unknown models default to chatml."""
+        assert get_template_for_model("unknown/some-model") == "chatml"
+
+
+class TestGetChatTemplate:
+    """Test get_chat_template function."""
+
+    def test_apply_llama3_template(self):
+        """Test applying llama-3 template to mock tokenizer."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="llama-3")
+
+        assert result is tokenizer
+        assert tokenizer.chat_template is not None
+        assert "<|start_header_id|>" in tokenizer.chat_template
+        assert tokenizer._unsloth_chat_template_name == "llama-3"
+
+    def test_apply_chatml_template(self):
+        """Test applying chatml template."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="chatml")
+
+        assert "<|im_start|>" in tokenizer.chat_template
+        assert "<|im_end|>" in tokenizer.chat_template
+
+    def test_apply_gemma_template(self):
+        """Test applying gemma template."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="gemma-2")
+
+        assert "<start_of_turn>" in tokenizer.chat_template
+        assert "<end_of_turn>" in tokenizer.chat_template
+
+    def test_alias_works(self):
+        """Test that template alias works."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="llama3")  # alias
+
+        assert tokenizer._unsloth_chat_template_name == "llama-3"
+
+    def test_auto_detection(self, capsys):
+        """Test auto-detection of template from model name."""
+        class MockTokenizer:
+            name_or_path = "mlx-community/Llama-3.2-1B-Instruct-4bit"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="auto")
+
+        captured = capsys.readouterr()
+        assert "Auto-detected" in captured.out
+        assert tokenizer._unsloth_chat_template_name == "llama-3.1"
+
+    def test_unknown_template_raises(self):
+        """Test that unknown template raises ValueError."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        with pytest.raises(ValueError, match="Unknown chat template"):
+            get_chat_template(tokenizer, chat_template="nonexistent")
+
+    def test_mapping_stored(self):
+        """Test that mapping is stored on tokenizer."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        mapping = {"role": "from", "content": "value"}
+        result = get_chat_template(tokenizer, chat_template="chatml", mapping=mapping)
+
+        assert tokenizer._unsloth_mapping == mapping
+
+    def test_system_message_stored(self):
+        """Test that custom system message is stored."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(
+            tokenizer,
+            chat_template="llama-3",
+            system_message="Custom system prompt"
+        )
+
+        assert tokenizer._unsloth_system_message == "Custom system prompt"
+
+    def test_default_system_message(self):
+        """Test that default system message is applied for supported models."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="llama-3")
+
+        assert hasattr(tokenizer, '_unsloth_system_message')
+        assert tokenizer._unsloth_system_message == "You are a helpful assistant."
+
+    def test_stop_token_stored(self):
+        """Test that stop token is stored on tokenizer."""
+        class MockTokenizer:
+            name_or_path = "test-model"
+            chat_template = None
+
+        tokenizer = MockTokenizer()
+        result = get_chat_template(tokenizer, chat_template="llama-3")
+
+        assert tokenizer._unsloth_stop_token == "<|eot_id|>"
+
+
+class TestTemplateContents:
+    """Test that templates contain expected content."""
+
+    def test_llama3_has_special_tokens(self):
+        """Test llama-3 template contains required tokens."""
+        template = CHAT_TEMPLATES["llama-3"].template
+        assert "<|start_header_id|>" in template
+        assert "<|end_header_id|>" in template
+        assert "<|eot_id|>" in template
+        assert "bos_token" in template  # Uses bos_token variable
+
+    def test_chatml_has_special_tokens(self):
+        """Test chatml template contains required tokens."""
+        template = CHAT_TEMPLATES["chatml"].template
+        assert "<|im_start|>" in template
+        assert "<|im_end|>" in template
+
+    def test_gemma_maps_assistant_to_model(self):
+        """Test gemma template uses 'model' role for assistant."""
+        template = CHAT_TEMPLATES["gemma-2"].template
+        assert "model" in template  # Gemma uses "model" not "assistant"
+
+    def test_phi4_has_separator(self):
+        """Test phi-4 template uses im_sep."""
+        template = CHAT_TEMPLATES["phi-4"].template
+        assert "<|im_sep|>" in template
+
+    def test_mistral_has_inst_tokens(self):
+        """Test mistral template has [INST] tokens."""
+        template = CHAT_TEMPLATES["mistral"].template
+        assert "[INST]" in template
+        assert "[/INST]" in template
+
+    def test_qwen3_has_thinking_tokens(self):
+        """Test qwen-3 template supports thinking."""
+        template = CHAT_TEMPLATES["qwen-3"].template
+        assert "<think>" in template
+        assert "</think>" in template
+
+    def test_deepseek_has_unicode_tokens(self):
+        """Test deepseek template has unicode tokens."""
+        template = CHAT_TEMPLATES["deepseek-v2"].template
+        assert "<｜User｜>" in template
+        assert "<｜Assistant｜>" in template
+
+
+# =============================================================================
+# TESTS FOR TRAIN_ON_RESPONSES_ONLY (Phase 1.2)
+# =============================================================================
+
+class TestGetTemplateParts:
+    """Test _get_template_parts function."""
+
+    def test_llama3_parts(self):
+        """Test llama-3 template parts."""
+        parts = _get_template_parts("llama-3")
+        assert parts["instruction_part"] == "<|start_header_id|>user<|end_header_id|>\n\n"
+        assert parts["response_part"] == "<|start_header_id|>assistant<|end_header_id|>\n\n"
+
+    def test_chatml_parts(self):
+        """Test chatml template parts."""
+        parts = _get_template_parts("chatml")
+        assert parts["instruction_part"] == "<|im_start|>user\n"
+        assert parts["response_part"] == "<|im_start|>assistant\n"
+
+    def test_gemma_parts(self):
+        """Test gemma template parts (uses 'model' not 'assistant')."""
+        parts = _get_template_parts("gemma-2")
+        assert parts["instruction_part"] == "<start_of_turn>user\n"
+        assert parts["response_part"] == "<start_of_turn>model\n"
+
+    def test_phi4_parts(self):
+        """Test phi-4 template parts (uses im_sep)."""
+        parts = _get_template_parts("phi-4")
+        assert "<|im_sep|>" in parts["response_part"]
+
+    def test_mistral_parts(self):
+        """Test mistral template parts."""
+        parts = _get_template_parts("mistral")
+        assert parts["instruction_part"] == "[INST]"
+        assert parts["response_part"] == "[/INST]"
+
+    def test_alpaca_parts(self):
+        """Test alpaca template parts."""
+        parts = _get_template_parts("alpaca")
+        assert parts["instruction_part"] == "### Instruction:\n"
+        assert parts["response_part"] == "### Response:\n"
+
+    def test_alias_resolves(self):
+        """Test that aliases resolve correctly."""
+        parts_alias = _get_template_parts("llama3")
+        parts_full = _get_template_parts("llama-3")
+        assert parts_alias == parts_full
+
+    def test_unknown_template(self):
+        """Test unknown template returns None parts."""
+        parts = _get_template_parts("nonexistent")
+        assert parts["instruction_part"] is None
+        assert parts["response_part"] is None
+
+    def test_all_templates_have_parts(self):
+        """Test all registered templates have parts defined."""
+        for name in CHAT_TEMPLATES.keys():
+            parts = _get_template_parts(name)
+            assert parts["instruction_part"] is not None, f"{name} missing instruction_part"
+            assert parts["response_part"] is not None, f"{name} missing response_part"
+
+
+class TestTrainOnResponsesOnly:
+    """Test train_on_responses_only function."""
+
+    def test_basic_usage(self, capsys):
+        """Test basic usage with explicit parts."""
+        class MockTrainer:
+            tokenizer = None
+
+        trainer = MockTrainer()
+        result = train_on_responses_only(
+            trainer,
+            instruction_part="<|user|>",
+            response_part="<|assistant|>",
+        )
+
+        assert result is trainer
+        assert trainer._train_on_responses_only is True
+        assert trainer._instruction_part == "<|user|>"
+        assert trainer._response_part == "<|assistant|>"
+
+        captured = capsys.readouterr()
+        assert "train_on_responses_only enabled" in captured.out
+
+    def test_auto_detect_from_tokenizer(self, capsys):
+        """Test auto-detection of parts from tokenizer template name."""
+        class MockTokenizer:
+            _unsloth_chat_template_name = "llama-3"
+
+        class MockTrainer:
+            tokenizer = MockTokenizer()
+
+        trainer = MockTrainer()
+        result = train_on_responses_only(trainer)
+
+        assert trainer._instruction_part == "<|start_header_id|>user<|end_header_id|>\n\n"
+        assert trainer._response_part == "<|start_header_id|>assistant<|end_header_id|>\n\n"
+
+    def test_auto_detect_from_model_name(self, capsys):
+        """Test auto-detection from tokenizer name_or_path."""
+        class MockTokenizer:
+            name_or_path = "mlx-community/Llama-3.2-1B-Instruct-4bit"
+
+        class MockTrainer:
+            tokenizer = MockTokenizer()
+
+        trainer = MockTrainer()
+        result = train_on_responses_only(trainer)
+
+        # Should detect llama-3.1 template
+        assert "user<|end_header_id|>" in trainer._instruction_part
+        assert "assistant<|end_header_id|>" in trainer._response_part
+
+    def test_partial_override(self, capsys):
+        """Test partial override - provide one part, auto-detect the other."""
+        class MockTokenizer:
+            _unsloth_chat_template_name = "chatml"
+
+        class MockTrainer:
+            tokenizer = MockTokenizer()
+
+        trainer = MockTrainer()
+        result = train_on_responses_only(
+            trainer,
+            instruction_part="CUSTOM_USER",  # Override instruction
+            # Let response_part be auto-detected
+        )
+
+        assert trainer._instruction_part == "CUSTOM_USER"
+        assert trainer._response_part == "<|im_start|>assistant\n"  # Auto-detected
+
+
+class TestGetResponseTemplateIds:
+    """Test get_response_template_ids function."""
+
+    def test_with_mock_tokenizer(self):
+        """Test with a mock tokenizer that has encode method."""
+        class MockTokenizer:
+            def encode(self, text, add_special_tokens=True):
+                # Simple mock that returns character codes
+                return [ord(c) for c in text[:5]]
+
+        tokenizer = MockTokenizer()
+        ids = get_response_template_ids(tokenizer, "<|assistant|>")
+
+        assert isinstance(ids, list)
+        assert len(ids) > 0
+
+    def test_without_encode_method(self):
+        """Test with tokenizer without encode method."""
+        class MockTokenizer:
+            pass
+
+        tokenizer = MockTokenizer()
+        ids = get_response_template_ids(tokenizer, "<|assistant|>")
+
+        assert ids == []
+
+
+class TestTrainOnResponsesOnlyImport:
+    """Test train_on_responses_only import from main package."""
+
+    def test_import_from_package(self):
+        """Test importing from main package."""
+        from unsloth_mlx import train_on_responses_only
+
+        assert callable(train_on_responses_only)
 
 
 # Run tests

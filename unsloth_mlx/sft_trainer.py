@@ -536,12 +536,17 @@ class SFTTrainer:
 
         # Step 7: Load datasets using mlx_lm dataset utilities
         # mlx_load_dataset expects an args object with specific attributes
+        # Check if response-only training is enabled
+        mask_prompt = getattr(self, '_train_on_responses_only', False)
+        if mask_prompt:
+            print("  Response-only training enabled (mask_prompt=True)")
+
         dataset_args = types.SimpleNamespace(
             data=data_dir,
             train=True,
             test=False,
             hf_dataset=None,
-            mask_prompt=False,
+            mask_prompt=mask_prompt,
         )
 
         try:
@@ -650,6 +655,11 @@ class SFTTrainer:
         # Add gradient checkpointing if enabled
         if self._should_use_grad_checkpoint():
             cmd.append("--grad-checkpoint")
+
+        # Add prompt masking for response-only training
+        if getattr(self, '_train_on_responses_only', False):
+            cmd.append("--mask-prompt")
+            print("  Response-only training enabled (--mask-prompt)")
 
         if self.eval_dataset:
             cmd.append("--test")

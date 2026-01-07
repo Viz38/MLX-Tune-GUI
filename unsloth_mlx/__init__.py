@@ -13,7 +13,7 @@ Supported Training Methods:
 - VLM (Vision Language Model) fine-tuning
 """
 
-__version__ = "0.3.0"  # Native training + proper DPO/ORPO/GRPO/KTO/SimPO losses
+__version__ = "0.3.1"  # Added get_chat_template() with 15 model templates
 
 from unsloth_mlx.model import FastLanguageModel
 from unsloth_mlx.trainer import (
@@ -63,12 +63,25 @@ from unsloth_mlx.vlm import (
 
 # Chat Templates and Dataset Formatting (Unsloth-compatible)
 from unsloth_mlx.chat_templates import (
+    # Dataset format detection and conversion
     detect_dataset_format,
     standardize_sharegpt,
     convert_to_mlx_format,
     get_formatting_func,
     apply_chat_template_to_sample,
     alpaca_to_text,
+    # Chat template functions (Unsloth-compatible)
+    get_chat_template,
+    list_chat_templates,
+    get_template_info,
+    get_template_for_model,
+    # Response-only training (Unsloth-compatible)
+    train_on_responses_only,
+    # Template registry
+    CHAT_TEMPLATES,
+    TEMPLATE_ALIASES,
+    DEFAULT_SYSTEM_MESSAGES,
+    ChatTemplateEntry,
 )
 
 __all__ = [
@@ -119,4 +132,16 @@ __all__ = [
     "get_formatting_func",
     "apply_chat_template_to_sample",
     "alpaca_to_text",
+    # Chat Template Functions (Unsloth-compatible)
+    "get_chat_template",
+    "list_chat_templates",
+    "get_template_info",
+    "get_template_for_model",
+    # Response-only Training (Unsloth-compatible)
+    "train_on_responses_only",
+    # Template Registry
+    "CHAT_TEMPLATES",
+    "TEMPLATE_ALIASES",
+    "DEFAULT_SYSTEM_MESSAGES",
+    "ChatTemplateEntry",
 ]
