@@ -127,8 +127,8 @@ class FastLanguageModel:
         mlx_kwargs.update(kwargs)
 
         try:
-            # Load model using MLX
-            model, tokenizer = mlx_load(model_name, **mlx_kwargs)
+            # Load model using MLX (with config for saving later)
+            model, tokenizer, config = mlx_load(model_name, return_config=True, **mlx_kwargs)
 
             # Wrap model with our compatibility layer
             wrapped_model = MLXModelWrapper(
@@ -136,6 +136,7 @@ class FastLanguageModel:
                 tokenizer=tokenizer,
                 max_seq_length=max_seq_length,
                 model_name=model_name,
+                config=config,
             )
 
             return wrapped_model, tokenizer
@@ -293,6 +294,7 @@ class MLXModelWrapper:
         tokenizer: Any,
         max_seq_length: Optional[int] = None,
         model_name: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Initialize the MLX model wrapper.
@@ -302,11 +304,13 @@ class MLXModelWrapper:
             tokenizer: The tokenizer instance
             max_seq_length: Maximum sequence length
             model_name: Name/path of the model
+            config: Model configuration dict (for saving)
         """
         self.model = model
         self.tokenizer = tokenizer
         self.max_seq_length = max_seq_length
         self.model_name = model_name
+        self.config = config  # Store for saving
 
         # LoRA configuration
         self.lora_config = None

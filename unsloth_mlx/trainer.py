@@ -258,7 +258,24 @@ def save_model_hf_format(
         else:
             actual_model = model
 
-        save_model(str(output_dir), actual_model, tokenizer)
+        # mlx_lm.utils.save_model only takes (save_path, model) - tokenizer is saved separately
+        save_model(str(output_dir), actual_model)
+
+        # Save tokenizer separately
+        tokenizer.save_pretrained(str(output_dir))
+
+        # Save config.json if available (needed for loading and GGUF export)
+        if hasattr(model, 'config') and model.config is not None:
+            config_path = output_dir / "config.json"
+            with open(config_path, 'w') as f:
+                json.dump(model.config, f, indent=2)
+        elif hasattr(model, 'model_path') and model.model_path:
+            # Try to copy config from original model path
+            src_config = Path(model.model_path) / "config.json"
+            if src_config.exists():
+                import shutil
+                shutil.copy(src_config, output_dir / "config.json")
+
         print(f"✓ Model saved to {output_dir}")
 
         if push_to_hub and repo_id:
