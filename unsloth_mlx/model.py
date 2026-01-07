@@ -391,7 +391,7 @@ class MLXModelWrapper:
                 "mlx_lm.tuner is not available. Install with: pip install 'mlx-lm[train]'"
             )
 
-        # Determine number of layers
+        # Determine number of layers - must be detected, no silent fallback
         if num_layers is None:
             # Try to detect from model structure
             if hasattr(self.model, 'layers'):
@@ -399,7 +399,10 @@ class MLXModelWrapper:
             elif hasattr(self.model, 'model') and hasattr(self.model.model, 'layers'):
                 num_layers = len(self.model.model.layers)
             else:
-                num_layers = 16  # Default fallback
+                raise ValueError(
+                    "Could not detect number of layers in model. "
+                    "Please specify num_layers explicitly when calling _apply_lora() or in SFTConfig."
+                )
 
         # Convert lora_alpha to scale: scale = alpha / r
         r = self.lora_config['r']
