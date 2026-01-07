@@ -33,7 +33,7 @@
 >
 > **The goal isn't to replace Unsloth or claim superior performance.** The goal is **code portability**: allowing you to write `FastLanguageModel` code once on your Mac, test it, and then push that *exact same script* to a CUDA cluster. It solves a workflow problem, not just a hardware one.
 >
-> This is an "unofficial" project built by a fan, for fans who happen to use Macs.
+> This is an "unofficial" project built by a fan, for fans who happen to use Macs. It's helping me personally, and if it helps others like me, then I'll have my satisfaction.
 
 ## Why Unsloth-MLX?
 
