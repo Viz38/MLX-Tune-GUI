@@ -20,6 +20,7 @@ Output formats (mlx-lm compatible):
 from typing import Any, Dict, List, Optional, Callable, Union, NamedTuple
 from datasets import Dataset
 import re
+import random
 
 
 # Default Alpaca prompt template
@@ -1219,11 +1220,666 @@ def create_response_only_collator(
     return collator
 
 
+# =============================================================================
+# PHASE 2.1: TO_SHAREGPT WITH CONVERSATION_EXTENSION (Unsloth-compatible)
+# =============================================================================
+
+def to_sharegpt(
+    dataset: Dataset,
+    merged_prompt: Optional[str] = None,
+    output_column_name: str = "output",
+    conversation_extension: int = 1,
+    column_mapping: Optional[Dict[str, str]] = None,
+    random_state: Optional[int] = None,
+) -> Dataset:
+    """
+    Convert dataset to ShareGPT format with optional multi-turn conversation merging.
+
+    This function matches Unsloth's to_sharegpt API for drop-in compatibility.
+    It converts single-turn datasets to multi-turn conversations by optionally
+    merging multiple rows together.
+
+    Args:
+        dataset: Input dataset in any format (Alpaca, text, etc.)
+        merged_prompt: Optional prompt template with {column_name} placeholders.
+                      Use [[text {column}]] for optional sections.
+                      If None, auto-generates from available columns.
+        output_column_name: Column name containing the target/output text.
+                           Default: "output"
+        conversation_extension: Number of rows to merge into one conversation.
+                               Set to 1 for single-turn (default).
+                               Set to 2-5 for multi-turn conversations.
+                               Higher values may improve chatbot quality but slow training.
+        column_mapping: Optional mapping for non-standard column names.
+                       e.g., {"instruction": "question", "output": "answer"}
+        random_state: Random seed for reproducible conversation merging.
+
+    Returns:
+        Dataset in ShareGPT format with 'conversations' column
+
+    Example:
+        >>> from unsloth_mlx import to_sharegpt, standardize_sharegpt
+        >>> # Convert Alpaca dataset with multi-turn merging
+        >>> dataset = to_sharegpt(
+        ...     dataset,
+        ...     output_column_name="output",
+        ...     conversation_extension=3,  # Merge 3 rows into 1 conversation
+        ... )
+        >>> dataset = standardize_sharegpt(dataset)  # Always call this after!
+
+    Note:
+        The conversation_extension parameter randomly selects rows and merges them.
+        This can significantly improve chatbot quality for instruction-following tasks.
+    """
+    if random_state is not None:
+        random.seed(random_state)
+
+    # Apply column mapping if provided
+    if column_mapping:
+        dataset = apply_column_mapping(dataset, column_mapping)
+
+    # Detect format and get sample
+    if len(dataset) == 0:
+        return dataset
+
+    sample = dataset[0]
+    input_format = detect_dataset_format(sample)
+    print(f"to_sharegpt: Detected format '{input_format}', conversation_extension={conversation_extension}")
+
+    # Build conversations
+    def create_single_conversation(sample: Dict[str, Any]) -> List[Dict[str, str]]:
+        """Create a single conversation from one sample."""
+        conversation = []
+
+        if input_format == 'alpaca':
+            # Build user message from instruction + input
+            instruction = sample.get('instruction', '')
+            input_text = sample.get('input', '')
+            user_content = instruction
+            if input_text and input_text.strip():
+                user_content = f"{instruction}\n\n{input_text}"
+
+            conversation.append({
+                'from': 'human',
+                'value': user_content.strip()
+            })
+            conversation.append({
+                'from': 'gpt',
+                'value': sample.get(output_column_name, sample.get('output', '')).strip()
+            })
+
+        elif input_format == 'completions':
+            conversation.append({
+                'from': 'human',
+                'value': sample.get('prompt', '').strip()
+            })
+            conversation.append({
+                'from': 'gpt',
+                'value': sample.get('completion', sample.get(output_column_name, '')).strip()
+            })
+
+        elif input_format == 'chatml':
+            # Convert ChatML messages to ShareGPT format
+            role_mapping = {'user': 'human', 'assistant': 'gpt', 'system': 'system'}
+            for msg in sample.get('messages', []):
+                conversation.append({
+                    'from': role_mapping.get(msg.get('role', 'user'), 'human'),
+                    'value': msg.get('content', '').strip()
+                })
+
+        elif input_format == 'sharegpt':
+            # Already in ShareGPT format
+            return sample.get('conversations', [])
+
+        elif input_format == 'text':
+            # Use custom merged_prompt or fallback
+            if merged_prompt:
+                user_content = _apply_prompt_template(merged_prompt, sample)
+            else:
+                user_content = sample.get('text', '')
+
+            # Try to split into prompt/response if output column exists
+            output = sample.get(output_column_name, '')
+            if output:
+                conversation.append({'from': 'human', 'value': user_content.strip()})
+                conversation.append({'from': 'gpt', 'value': output.strip()})
+            else:
+                # Just use the text as a human message
+                conversation.append({'from': 'human', 'value': user_content.strip()})
+                conversation.append({'from': 'gpt', 'value': ''})
+
+        else:
+            # Unknown format - try to use merged_prompt or create from available fields
+            if merged_prompt:
+                user_content = _apply_prompt_template(merged_prompt, sample)
+            else:
+                # Try common field patterns
+                user_content = sample.get('question', sample.get('query', sample.get('input', '')))
+
+            output = sample.get(output_column_name, sample.get('answer', sample.get('response', '')))
+
+            if user_content:
+                conversation.append({'from': 'human', 'value': str(user_content).strip()})
+                conversation.append({'from': 'gpt', 'value': str(output).strip() if output else ''})
+
+        return conversation
+
+    # Handle conversation_extension
+    if conversation_extension <= 1:
+        # Single-turn: just convert each sample
+        def convert_sample(sample):
+            return {'conversations': create_single_conversation(sample)}
+        return dataset.map(convert_sample)
+    else:
+        # Multi-turn: merge multiple samples into one conversation
+        # Get all indices
+        indices = list(range(len(dataset)))
+
+        # Group indices for merging
+        merged_data = []
+        i = 0
+        while i < len(indices):
+            # Get a group of samples to merge
+            group_size = min(conversation_extension, len(indices) - i)
+
+            # Random selection for better diversity
+            if group_size < conversation_extension and len(indices) > conversation_extension:
+                # For the last incomplete group, randomly select from all indices
+                group_indices = random.sample(indices, min(conversation_extension, len(indices)))
+            else:
+                group_indices = indices[i:i + group_size]
+
+            # Merge conversations
+            merged_conversation = []
+            for idx in group_indices:
+                sample = dataset[idx]
+                conv = create_single_conversation(sample)
+                merged_conversation.extend(conv)
+
+            merged_data.append({'conversations': merged_conversation})
+            i += group_size
+
+        # Create new dataset
+        from datasets import Dataset as HFDataset
+        return HFDataset.from_list(merged_data)
+
+
+def _apply_prompt_template(template: str, sample: Dict[str, Any]) -> str:
+    """
+    Apply a prompt template with {column} placeholders and [[optional]] sections.
+
+    Args:
+        template: Template string with {column_name} placeholders
+                 Use [[text {column}]] for optional sections
+        sample: Sample dictionary with column values
+
+    Returns:
+        Formatted string with placeholders replaced
+    """
+    result = template
+
+    # Handle optional sections first: [[text {column}]]
+    optional_pattern = r'\[\[(.*?)\]\]'
+
+    def replace_optional(match):
+        section = match.group(1)
+        # Find all column references in this section
+        col_refs = re.findall(r'\{(\w+)\}', section)
+        # Check if all referenced columns have values
+        for col in col_refs:
+            value = sample.get(col, '')
+            if not value or (isinstance(value, str) and not value.strip()):
+                return ''  # Remove entire optional section
+        # All columns have values, include the section
+        for col in col_refs:
+            section = section.replace(f'{{{col}}}', str(sample.get(col, '')))
+        return section
+
+    result = re.sub(optional_pattern, replace_optional, result)
+
+    # Now replace remaining {column} placeholders
+    for key, value in sample.items():
+        result = result.replace(f'{{{key}}}', str(value) if value else '')
+
+    return result.strip()
+
+
+# =============================================================================
+# PHASE 2.2: CUSTOM COLUMN MAPPING (Unsloth-compatible)
+# =============================================================================
+
+def apply_column_mapping(
+    dataset: Dataset,
+    column_mapping: Dict[str, str],
+    inplace: bool = False,
+) -> Dataset:
+    """
+    Apply column mapping to rename dataset columns.
+
+    This function matches Unsloth's column mapping behavior for datasets
+    with non-standard column names.
+
+    Args:
+        dataset: Input dataset
+        column_mapping: Mapping from standard names to actual column names.
+                       e.g., {"instruction": "question", "output": "answer"}
+                       The keys are the target standard names, values are source names.
+        inplace: If True, modify dataset in place (not supported, always creates new)
+
+    Returns:
+        Dataset with renamed columns
+
+    Example:
+        >>> from unsloth_mlx import apply_column_mapping
+        >>> # Dataset has 'question' and 'answer' columns
+        >>> dataset = apply_column_mapping(dataset, {
+        ...     "instruction": "question",
+        ...     "output": "answer"
+        ... })
+        >>> # Now dataset has 'instruction' and 'output' columns
+    """
+    if not column_mapping:
+        return dataset
+
+    # Check which source columns exist
+    existing_cols = set(dataset.column_names)
+    rename_map = {}
+
+    for target_name, source_name in column_mapping.items():
+        if source_name in existing_cols:
+            # Only rename if source exists and target != source
+            if target_name != source_name:
+                rename_map[source_name] = target_name
+
+    if not rename_map:
+        return dataset
+
+    print(f"apply_column_mapping: Renaming columns {rename_map}")
+
+    # Apply renaming
+    return dataset.rename_columns(rename_map)
+
+
+def infer_column_mapping(
+    dataset: Dataset,
+    target_format: str = "alpaca",
+) -> Dict[str, str]:
+    """
+    Automatically infer column mapping based on common patterns.
+
+    This helps convert datasets with non-standard column names to
+    standard formats (Alpaca, ChatML, etc.).
+
+    Args:
+        dataset: Input dataset
+        target_format: Target format to infer mapping for.
+                      Options: "alpaca", "completions", "chatml"
+
+    Returns:
+        Suggested column mapping dictionary
+
+    Example:
+        >>> from unsloth_mlx import infer_column_mapping
+        >>> mapping = infer_column_mapping(dataset, target_format="alpaca")
+        >>> print(mapping)
+        {'instruction': 'question', 'output': 'answer'}
+    """
+    existing_cols = set(dataset.column_names)
+
+    # Common field patterns
+    instruction_patterns = ['instruction', 'question', 'query', 'prompt', 'input', 'user', 'human']
+    output_patterns = ['output', 'answer', 'response', 'completion', 'target', 'assistant', 'gpt']
+    input_patterns = ['input', 'context', 'document', 'passage']
+    system_patterns = ['system', 'system_message', 'system_prompt']
+
+    mapping = {}
+
+    if target_format == "alpaca":
+        # Find instruction column
+        for pattern in instruction_patterns:
+            if pattern in existing_cols:
+                if pattern != 'instruction':
+                    mapping['instruction'] = pattern
+                break
+
+        # Find output column
+        for pattern in output_patterns:
+            if pattern in existing_cols:
+                if pattern != 'output':
+                    mapping['output'] = pattern
+                break
+
+        # Find input column (optional)
+        for pattern in input_patterns:
+            if pattern in existing_cols and pattern != 'input':
+                mapping['input'] = pattern
+                break
+
+    elif target_format == "completions":
+        # Find prompt column
+        for pattern in instruction_patterns:
+            if pattern in existing_cols:
+                if pattern != 'prompt':
+                    mapping['prompt'] = pattern
+                break
+
+        # Find completion column
+        for pattern in output_patterns:
+            if pattern in existing_cols:
+                if pattern != 'completion':
+                    mapping['completion'] = pattern
+                break
+
+    elif target_format == "chatml":
+        # For ChatML, we need messages - check if already present
+        if 'messages' not in existing_cols:
+            # Need to convert, return suggested mapping
+            for pattern in instruction_patterns:
+                if pattern in existing_cols:
+                    mapping['_user_content'] = pattern
+                    break
+            for pattern in output_patterns:
+                if pattern in existing_cols:
+                    mapping['_assistant_content'] = pattern
+                    break
+
+    return mapping
+
+
+# =============================================================================
+# PHASE 2.3: HF DATASET CONFIG (Unsloth-compatible)
+# =============================================================================
+
+class HFDatasetConfig:
+    """
+    Configuration for loading and processing HuggingFace datasets.
+
+    This matches Unsloth's dataset configuration pattern for easy integration.
+
+    Attributes:
+        path: HuggingFace dataset path (e.g., "yahma/alpaca-cleaned")
+        name: Dataset configuration name (optional)
+        train_split: Training split specification (default: "train")
+        valid_split: Validation split specification (optional)
+        streaming: Whether to use streaming mode (default: False)
+        column_mapping: Optional column renaming mapping
+        prompt_template: Custom prompt template for text formatting
+        output_column: Column containing target/output text
+
+    Example:
+        >>> from unsloth_mlx import HFDatasetConfig
+        >>> config = HFDatasetConfig(
+        ...     path="Open-Orca/OpenOrca",
+        ...     train_split="train[:90%]",
+        ...     valid_split="train[-10%:]",
+        ...     column_mapping={"instruction": "question", "output": "response"},
+        ... )
+    """
+
+    def __init__(
+        self,
+        path: str,
+        name: Optional[str] = None,
+        train_split: str = "train",
+        valid_split: Optional[str] = None,
+        streaming: bool = False,
+        column_mapping: Optional[Dict[str, str]] = None,
+        prompt_template: Optional[str] = None,
+        output_column: str = "output",
+        conversation_extension: int = 1,
+        max_samples: Optional[int] = None,
+    ):
+        self.path = path
+        self.name = name
+        self.train_split = train_split
+        self.valid_split = valid_split
+        self.streaming = streaming
+        self.column_mapping = column_mapping
+        self.prompt_template = prompt_template
+        self.output_column = output_column
+        self.conversation_extension = conversation_extension
+        self.max_samples = max_samples
+
+    def load(self) -> Dataset:
+        """
+        Load the dataset according to this configuration.
+
+        Returns:
+            Loaded and preprocessed Dataset
+
+        Example:
+            >>> config = HFDatasetConfig(path="yahma/alpaca-cleaned")
+            >>> dataset = config.load()
+        """
+        from datasets import load_dataset
+
+        # Load the dataset
+        load_kwargs = {
+            "split": self.train_split,
+            "streaming": self.streaming,
+        }
+        if self.name:
+            load_kwargs["name"] = self.name
+
+        print(f"Loading dataset: {self.path}")
+        dataset = load_dataset(self.path, **load_kwargs)
+
+        # Apply max_samples if specified
+        if self.max_samples and not self.streaming:
+            dataset = dataset.select(range(min(self.max_samples, len(dataset))))
+
+        # Apply column mapping
+        if self.column_mapping:
+            dataset = apply_column_mapping(dataset, self.column_mapping)
+
+        return dataset
+
+    def load_train_and_valid(self) -> tuple:
+        """
+        Load both training and validation datasets.
+
+        Returns:
+            Tuple of (train_dataset, valid_dataset). valid_dataset may be None.
+
+        Example:
+            >>> config = HFDatasetConfig(
+            ...     path="Open-Orca/OpenOrca",
+            ...     train_split="train[:90%]",
+            ...     valid_split="train[-10%:]",
+            ... )
+            >>> train_ds, valid_ds = config.load_train_and_valid()
+        """
+        from datasets import load_dataset
+
+        load_kwargs = {"streaming": self.streaming}
+        if self.name:
+            load_kwargs["name"] = self.name
+
+        print(f"Loading dataset: {self.path}")
+
+        # Load train split
+        train_dataset = load_dataset(self.path, split=self.train_split, **load_kwargs)
+
+        # Apply max_samples to train
+        if self.max_samples and not self.streaming:
+            train_dataset = train_dataset.select(range(min(self.max_samples, len(train_dataset))))
+
+        # Apply column mapping to train
+        if self.column_mapping:
+            train_dataset = apply_column_mapping(train_dataset, self.column_mapping)
+
+        # Load valid split if specified
+        valid_dataset = None
+        if self.valid_split:
+            valid_dataset = load_dataset(self.path, split=self.valid_split, **load_kwargs)
+            if self.column_mapping:
+                valid_dataset = apply_column_mapping(valid_dataset, self.column_mapping)
+
+        return train_dataset, valid_dataset
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert config to dictionary for serialization."""
+        return {
+            "path": self.path,
+            "name": self.name,
+            "train_split": self.train_split,
+            "valid_split": self.valid_split,
+            "streaming": self.streaming,
+            "column_mapping": self.column_mapping,
+            "prompt_template": self.prompt_template,
+            "output_column": self.output_column,
+            "conversation_extension": self.conversation_extension,
+            "max_samples": self.max_samples,
+        }
+
+    @classmethod
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "HFDatasetConfig":
+        """Create config from dictionary."""
+        return cls(**config_dict)
+
+
+def load_dataset_with_config(
+    config: Union[HFDatasetConfig, Dict[str, Any], str],
+    tokenizer: Optional[Any] = None,
+    convert_to_sharegpt: bool = False,
+) -> Dataset:
+    """
+    Load and preprocess a dataset using configuration.
+
+    This is a convenience function that handles the full pipeline:
+    loading, column mapping, format conversion, and optional ShareGPT conversion.
+
+    Args:
+        config: HFDatasetConfig, dict with config params, or dataset path string
+        tokenizer: Optional tokenizer for chat template application
+        convert_to_sharegpt: Whether to convert to ShareGPT format
+
+    Returns:
+        Processed Dataset ready for training
+
+    Example:
+        >>> from unsloth_mlx import load_dataset_with_config
+        >>> dataset = load_dataset_with_config(
+        ...     {"path": "yahma/alpaca-cleaned", "max_samples": 1000},
+        ...     tokenizer=tokenizer,
+        ...     convert_to_sharegpt=True,
+        ... )
+    """
+    # Handle different config types
+    if isinstance(config, str):
+        config = HFDatasetConfig(path=config)
+    elif isinstance(config, dict):
+        config = HFDatasetConfig.from_dict(config)
+
+    # Load dataset
+    dataset = config.load()
+
+    # Convert to ShareGPT if requested
+    if convert_to_sharegpt:
+        dataset = to_sharegpt(
+            dataset,
+            merged_prompt=config.prompt_template,
+            output_column_name=config.output_column,
+            conversation_extension=config.conversation_extension,
+        )
+        dataset = standardize_sharegpt(dataset)
+
+    return dataset
+
+
+# =============================================================================
+# ENHANCED STANDARDIZE_SHAREGPT (Unsloth-compatible)
+# =============================================================================
+
+def standardize_sharegpt_enhanced(
+    dataset: Dataset,
+    role_mapping: Optional[Dict[str, str]] = None,
+    content_mapping: Optional[Dict[str, str]] = None,
+) -> Dataset:
+    """
+    Enhanced version of standardize_sharegpt with custom role/content mapping.
+
+    This extends the basic standardize_sharegpt function to support
+    datasets with non-standard field names.
+
+    Args:
+        dataset: Dataset with 'conversations' column
+        role_mapping: Mapping for role field names.
+                     e.g., {"from": "speaker", "human": "user_role"}
+        content_mapping: Mapping for content field names.
+                        e.g., {"value": "text", "content": "message"}
+
+    Returns:
+        Dataset with standardized ChatML format messages
+
+    Example:
+        >>> from unsloth_mlx import standardize_sharegpt_enhanced
+        >>> dataset = standardize_sharegpt_enhanced(
+        ...     dataset,
+        ...     role_mapping={"human": "person", "gpt": "ai"},
+        ...     content_mapping={"value": "message"},
+        ... )
+    """
+    # Default role mapping
+    default_role_mapping = {
+        'human': 'user',
+        'user': 'user',
+        'gpt': 'assistant',
+        'assistant': 'assistant',
+        'system': 'system',
+        'person': 'user',  # Common variant
+        'ai': 'assistant',  # Common variant
+        'bot': 'assistant',  # Common variant
+    }
+    if role_mapping:
+        default_role_mapping.update(role_mapping)
+
+    # Field names to check for role and content
+    role_fields = ['from', 'role', 'speaker', 'type']
+    content_fields = ['value', 'content', 'text', 'message']
+
+    if content_mapping:
+        content_fields = list(content_mapping.values()) + content_fields
+
+    def convert_sample(sample):
+        if 'conversations' not in sample:
+            return sample
+
+        messages = []
+        for turn in sample['conversations']:
+            # Find role
+            role = None
+            for field in role_fields:
+                if field in turn:
+                    role_value = turn[field]
+                    role = default_role_mapping.get(
+                        role_value.lower() if isinstance(role_value, str) else role_value,
+                        'user'
+                    )
+                    break
+            if role is None:
+                role = 'user'
+
+            # Find content
+            content = ''
+            for field in content_fields:
+                if field in turn and turn[field]:
+                    content = turn[field]
+                    break
+
+            messages.append({'role': role, 'content': content})
+
+        return {'messages': messages}
+
+    return dataset.map(convert_sample)
+
+
 # Convenience exports matching Unsloth API
 __all__ = [
     # Dataset format detection and conversion
     'detect_dataset_format',
     'standardize_sharegpt',
+    'standardize_sharegpt_enhanced',
     'convert_to_mlx_format',
     'get_formatting_func',
     'apply_chat_template_to_sample',
@@ -1245,4 +1901,12 @@ __all__ = [
     'TEMPLATE_ALIASES',
     'DEFAULT_SYSTEM_MESSAGES',
     'ChatTemplateEntry',
+    # Phase 2.1: Multi-turn conversation merging
+    'to_sharegpt',
+    # Phase 2.2: Column mapping
+    'apply_column_mapping',
+    'infer_column_mapping',
+    # Phase 2.3: HF dataset config
+    'HFDatasetConfig',
+    'load_dataset_with_config',
 ]
