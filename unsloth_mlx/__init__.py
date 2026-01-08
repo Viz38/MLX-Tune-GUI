@@ -13,7 +13,7 @@ Supported Training Methods:
 - VLM (Vision Language Model) fine-tuning
 """
 
-__version__ = "0.3.1"  # Added get_chat_template() with 15 model templates
+__version__ = "0.3.2"  # Added to_sharegpt(), column mapping, HFDatasetConfig
 
 from unsloth_mlx.model import FastLanguageModel
 from unsloth_mlx.trainer import (
@@ -66,6 +66,7 @@ from unsloth_mlx.chat_templates import (
     # Dataset format detection and conversion
     detect_dataset_format,
     standardize_sharegpt,
+    standardize_sharegpt_enhanced,
     convert_to_mlx_format,
     get_formatting_func,
     apply_chat_template_to_sample,
@@ -82,6 +83,14 @@ from unsloth_mlx.chat_templates import (
     TEMPLATE_ALIASES,
     DEFAULT_SYSTEM_MESSAGES,
     ChatTemplateEntry,
+    # Multi-turn conversation merging (Unsloth-compatible)
+    to_sharegpt,
+    # Column mapping (Unsloth-compatible)
+    apply_column_mapping,
+    infer_column_mapping,
+    # HF dataset config (Unsloth-compatible)
+    HFDatasetConfig,
+    load_dataset_with_config,
 )
 
 __all__ = [
@@ -128,6 +137,7 @@ __all__ = [
     # Chat Templates and Dataset Formatting
     "detect_dataset_format",
     "standardize_sharegpt",
+    "standardize_sharegpt_enhanced",
     "convert_to_mlx_format",
     "get_formatting_func",
     "apply_chat_template_to_sample",
@@ -144,4 +154,12 @@ __all__ = [
     "TEMPLATE_ALIASES",
     "DEFAULT_SYSTEM_MESSAGES",
     "ChatTemplateEntry",
+    # Multi-turn Conversation Merging (Unsloth-compatible)
+    "to_sharegpt",
+    # Column Mapping (Unsloth-compatible)
+    "apply_column_mapping",
+    "infer_column_mapping",
+    # HF Dataset Config (Unsloth-compatible)
+    "HFDatasetConfig",
+    "load_dataset_with_config",
 ]

@@ -93,6 +93,8 @@ class SFTConfig:
         use_native_training: bool = True,  # Use native MLX training vs subprocess
         grad_checkpoint: bool = False,  # Enable gradient checkpointing
         num_layers: Optional[int] = None,  # Number of layers to apply LoRA to
+        # HuggingFace dataset integration (Unsloth-compatible)
+        hf_dataset: Optional[Union[Dict[str, Any], Any]] = None,  # HFDatasetConfig or dict
         **kwargs
     ):
         self.output_dir = output_dir
@@ -118,6 +120,7 @@ class SFTConfig:
         self.use_native_training = use_native_training
         self.grad_checkpoint = grad_checkpoint
         self.num_layers = num_layers
+        self.hf_dataset = hf_dataset
 
         # Store any additional kwargs
         for key, value in kwargs.items():

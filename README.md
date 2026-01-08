@@ -70,7 +70,7 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.3.1** - Chat templates + response-only training!
+> 🚀 **v0.3.2** - Full dataset handling + multi-turn conversations!
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -81,8 +81,11 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 | ORPO Training | ✅ Stable | **Full ORPO loss** |
 | GRPO Training | ✅ Stable | **Multi-generation + reward** |
 | KTO/SimPO | ✅ Stable | Proper loss implementations |
-| **Chat Templates** | ✅ **NEW** | 15 models (llama, gemma, qwen, phi, mistral) |
-| **Response-Only Training** | ✅ **NEW** | `train_on_responses_only()` |
+| Chat Templates | ✅ Stable | 15 models (llama, gemma, qwen, phi, mistral) |
+| Response-Only Training | ✅ Stable | `train_on_responses_only()` |
+| **Multi-turn Merging** | ✅ **NEW** | `to_sharegpt()` + `conversation_extension` |
+| **Column Mapping** | ✅ **NEW** | `apply_column_mapping()` auto-rename |
+| **Dataset Config** | ✅ **NEW** | `HFDatasetConfig` structured loading |
 | Vision Models | ⚠️ Beta | Via mlx-vlm |
 | PyPI Package | ✅ Available | `uv pip install unsloth-mlx` |
 

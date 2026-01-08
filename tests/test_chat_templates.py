@@ -779,6 +779,389 @@ class TestTrainOnResponsesOnlyImport:
         assert callable(train_on_responses_only)
 
 
+# =============================================================================
+# TESTS FOR PHASE 2: ADVANCED DATASET FEATURES
+# =============================================================================
+
+from unsloth_mlx.chat_templates import (
+    to_sharegpt,
+    apply_column_mapping,
+    infer_column_mapping,
+    HFDatasetConfig,
+    load_dataset_with_config,
+    standardize_sharegpt_enhanced,
+)
+
+
+class TestToSharegpt:
+    """Test to_sharegpt function for multi-turn conversation merging."""
+
+    def test_alpaca_to_sharegpt_single_turn(self):
+        """Test converting Alpaca format to ShareGPT (single turn)."""
+        data = {
+            "instruction": ["Translate hello", "What is AI?"],
+            "input": ["to French", ""],
+            "output": ["Bonjour", "Artificial Intelligence"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = to_sharegpt(dataset, output_column_name="output", conversation_extension=1)
+
+        assert "conversations" in result[0]
+        assert len(result[0]["conversations"]) == 2  # user + assistant
+        assert result[0]["conversations"][0]["from"] == "human"
+        assert result[0]["conversations"][1]["from"] == "gpt"
+        assert "Translate hello" in result[0]["conversations"][0]["value"]
+        assert "Bonjour" in result[0]["conversations"][1]["value"]
+
+    def test_alpaca_to_sharegpt_multi_turn(self):
+        """Test merging multiple rows into multi-turn conversation."""
+        data = {
+            "instruction": ["Q1", "Q2", "Q3", "Q4"],
+            "input": ["", "", "", ""],
+            "output": ["A1", "A2", "A3", "A4"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = to_sharegpt(dataset, conversation_extension=2, random_state=42)
+
+        # With conversation_extension=2 and 4 samples, we should get 2 conversations
+        assert len(result) == 2
+        # Each conversation should have 4 turns (2 user + 2 assistant)
+        assert len(result[0]["conversations"]) == 4
+
+    def test_chatml_to_sharegpt(self):
+        """Test converting ChatML format to ShareGPT."""
+        data = {
+            "messages": [[
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi!"}
+            ]]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = to_sharegpt(dataset)
+
+        assert "conversations" in result[0]
+        assert result[0]["conversations"][0]["from"] == "human"
+        assert result[0]["conversations"][1]["from"] == "gpt"
+
+    def test_completions_to_sharegpt(self):
+        """Test converting completions format to ShareGPT."""
+        data = {
+            "prompt": ["What is 2+2?"],
+            "completion": ["4"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = to_sharegpt(dataset)
+
+        assert "conversations" in result[0]
+        assert result[0]["conversations"][0]["value"] == "What is 2+2?"
+        assert result[0]["conversations"][1]["value"] == "4"
+
+    def test_with_column_mapping(self):
+        """Test to_sharegpt with column mapping."""
+        data = {
+            "question": ["What is Python?"],
+            "answer": ["A programming language"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = to_sharegpt(
+            dataset,
+            column_mapping={"instruction": "question", "output": "answer"},
+            output_column_name="output"
+        )
+
+        assert "conversations" in result[0]
+        assert "What is Python?" in result[0]["conversations"][0]["value"]
+
+    def test_empty_dataset(self):
+        """Test with empty dataset."""
+        dataset = Dataset.from_dict({"instruction": [], "output": []})
+        result = to_sharegpt(dataset)
+        assert len(result) == 0
+
+    def test_random_state_reproducibility(self):
+        """Test that random_state produces reproducible results."""
+        data = {
+            "instruction": ["Q1", "Q2", "Q3", "Q4", "Q5", "Q6"],
+            "input": ["", "", "", "", "", ""],
+            "output": ["A1", "A2", "A3", "A4", "A5", "A6"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result1 = to_sharegpt(dataset, conversation_extension=2, random_state=42)
+        result2 = to_sharegpt(dataset, conversation_extension=2, random_state=42)
+
+        # Results should be identical with same seed
+        assert len(result1) == len(result2)
+
+
+class TestApplyColumnMapping:
+    """Test apply_column_mapping function."""
+
+    def test_basic_mapping(self):
+        """Test basic column renaming."""
+        data = {"question": ["Q1", "Q2"], "answer": ["A1", "A2"]}
+        dataset = Dataset.from_dict(data)
+
+        result = apply_column_mapping(dataset, {
+            "instruction": "question",
+            "output": "answer"
+        })
+
+        assert "instruction" in result.column_names
+        assert "output" in result.column_names
+        assert "question" not in result.column_names
+        assert "answer" not in result.column_names
+
+    def test_partial_mapping(self):
+        """Test mapping when only some columns exist."""
+        data = {"question": ["Q1"], "context": ["C1"]}
+        dataset = Dataset.from_dict(data)
+
+        result = apply_column_mapping(dataset, {
+            "instruction": "question",
+            "output": "nonexistent"  # This column doesn't exist
+        })
+
+        assert "instruction" in result.column_names
+        assert "context" in result.column_names
+
+    def test_empty_mapping(self):
+        """Test with empty mapping."""
+        data = {"col1": ["v1"]}
+        dataset = Dataset.from_dict(data)
+
+        result = apply_column_mapping(dataset, {})
+
+        assert list(result.column_names) == ["col1"]
+
+    def test_none_mapping(self):
+        """Test with None mapping."""
+        data = {"col1": ["v1"]}
+        dataset = Dataset.from_dict(data)
+
+        result = apply_column_mapping(dataset, None)
+
+        assert result is dataset
+
+
+class TestInferColumnMapping:
+    """Test infer_column_mapping function."""
+
+    def test_infer_alpaca_mapping(self):
+        """Test inferring mapping for Alpaca format."""
+        data = {"question": ["Q"], "answer": ["A"]}
+        dataset = Dataset.from_dict(data)
+
+        mapping = infer_column_mapping(dataset, target_format="alpaca")
+
+        assert mapping.get("instruction") == "question"
+        assert mapping.get("output") == "answer"
+
+    def test_infer_completions_mapping(self):
+        """Test inferring mapping for completions format."""
+        data = {"query": ["Q"], "response": ["R"]}
+        dataset = Dataset.from_dict(data)
+
+        mapping = infer_column_mapping(dataset, target_format="completions")
+
+        assert mapping.get("prompt") == "query"
+        assert mapping.get("completion") == "response"
+
+    def test_no_mapping_needed(self):
+        """Test when dataset already has correct columns."""
+        data = {"instruction": ["I"], "output": ["O"]}
+        dataset = Dataset.from_dict(data)
+
+        mapping = infer_column_mapping(dataset, target_format="alpaca")
+
+        # No mapping needed - columns already match
+        assert "instruction" not in mapping
+        assert "output" not in mapping
+
+
+class TestHFDatasetConfig:
+    """Test HFDatasetConfig class."""
+
+    def test_config_creation(self):
+        """Test creating a config."""
+        config = HFDatasetConfig(
+            path="yahma/alpaca-cleaned",
+            train_split="train[:100]",
+            valid_split="train[-10:]",
+            column_mapping={"instruction": "question"},
+            max_samples=50,
+        )
+
+        assert config.path == "yahma/alpaca-cleaned"
+        assert config.train_split == "train[:100]"
+        assert config.valid_split == "train[-10:]"
+        assert config.column_mapping == {"instruction": "question"}
+        assert config.max_samples == 50
+
+    def test_to_dict(self):
+        """Test converting config to dictionary."""
+        config = HFDatasetConfig(
+            path="test/dataset",
+            conversation_extension=3,
+        )
+
+        d = config.to_dict()
+
+        assert d["path"] == "test/dataset"
+        assert d["conversation_extension"] == 3
+        assert d["train_split"] == "train"
+
+    def test_from_dict(self):
+        """Test creating config from dictionary."""
+        d = {
+            "path": "test/dataset",
+            "train_split": "train[:50]",
+            "max_samples": 100,
+        }
+
+        config = HFDatasetConfig.from_dict(d)
+
+        assert config.path == "test/dataset"
+        assert config.train_split == "train[:50]"
+        assert config.max_samples == 100
+
+    def test_defaults(self):
+        """Test default values."""
+        config = HFDatasetConfig(path="test/dataset")
+
+        assert config.train_split == "train"
+        assert config.valid_split is None
+        assert config.streaming is False
+        assert config.conversation_extension == 1
+        assert config.output_column == "output"
+
+
+class TestStandardizeSharegptEnhanced:
+    """Test standardize_sharegpt_enhanced function."""
+
+    def test_basic_conversion(self):
+        """Test basic ShareGPT to ChatML conversion."""
+        data = {
+            "conversations": [[
+                {"from": "human", "value": "Hello"},
+                {"from": "gpt", "value": "Hi!"}
+            ]]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = standardize_sharegpt_enhanced(dataset)
+
+        assert "messages" in result[0]
+        assert result[0]["messages"][0]["role"] == "user"
+        assert result[0]["messages"][1]["role"] == "assistant"
+
+    def test_custom_role_mapping(self):
+        """Test with custom role mapping."""
+        data = {
+            "conversations": [[
+                {"from": "person", "value": "Hello"},
+                {"from": "ai", "value": "Hi!"}
+            ]]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = standardize_sharegpt_enhanced(dataset)
+
+        assert result[0]["messages"][0]["role"] == "user"
+        assert result[0]["messages"][1]["role"] == "assistant"
+
+    def test_different_content_field(self):
+        """Test with non-standard content field."""
+        data = {
+            "conversations": [[
+                {"from": "human", "text": "Hello"},
+                {"from": "gpt", "text": "Hi!"}
+            ]]
+        }
+        dataset = Dataset.from_dict(data)
+
+        result = standardize_sharegpt_enhanced(dataset)
+
+        assert result[0]["messages"][0]["content"] == "Hello"
+        assert result[0]["messages"][1]["content"] == "Hi!"
+
+
+class TestPhase2Imports:
+    """Test Phase 2 imports from main package."""
+
+    def test_imports_to_sharegpt(self):
+        """Test importing to_sharegpt from main package."""
+        from unsloth_mlx import to_sharegpt
+        assert callable(to_sharegpt)
+
+    def test_imports_column_mapping(self):
+        """Test importing column mapping functions."""
+        from unsloth_mlx import apply_column_mapping, infer_column_mapping
+        assert callable(apply_column_mapping)
+        assert callable(infer_column_mapping)
+
+    def test_imports_hf_dataset_config(self):
+        """Test importing HFDatasetConfig."""
+        from unsloth_mlx import HFDatasetConfig, load_dataset_with_config
+        assert HFDatasetConfig is not None
+        assert callable(load_dataset_with_config)
+
+    def test_imports_standardize_enhanced(self):
+        """Test importing standardize_sharegpt_enhanced."""
+        from unsloth_mlx import standardize_sharegpt_enhanced
+        assert callable(standardize_sharegpt_enhanced)
+
+
+class TestApplyPromptTemplate:
+    """Test _apply_prompt_template helper function (via to_sharegpt)."""
+
+    def test_basic_template(self):
+        """Test basic template substitution through to_sharegpt."""
+        data = {
+            "name": ["Alice"],
+            "age": [30],
+            "output": ["Response"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        # Use merged_prompt with placeholders
+        result = to_sharegpt(
+            dataset,
+            merged_prompt="User {name} is {age} years old",
+            output_column_name="output"
+        )
+
+        # The user content should have the template applied
+        assert "Alice" in result[0]["conversations"][0]["value"]
+        assert "30" in result[0]["conversations"][0]["value"]
+
+    def test_optional_sections(self):
+        """Test optional sections with [[...]] syntax."""
+        data = {
+            "name": ["Bob"],
+            "context": [""],  # Empty context
+            "output": ["Done"]
+        }
+        dataset = Dataset.from_dict(data)
+
+        # Optional section should be removed when context is empty
+        result = to_sharegpt(
+            dataset,
+            merged_prompt="Hello {name}[[, context: {context}]]",
+            output_column_name="output"
+        )
+
+        # The optional section with empty context should be omitted
+        conv = result[0]["conversations"][0]["value"]
+        assert "Bob" in conv
+        assert "context:" not in conv
+
+
 # Run tests
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
