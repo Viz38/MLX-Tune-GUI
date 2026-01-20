@@ -68,7 +68,7 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.3.3** - Fixed GGUF export bug + full dataset handling!
+> 🚀 **v0.3.4** - Fixed GGUF export with proper adapter_config.json saving!
 
 | Feature | Status | Notes |
 |---------|--------|-------|
