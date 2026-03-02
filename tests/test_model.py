@@ -3,7 +3,7 @@ Unit tests for FastLanguageModel
 """
 
 import pytest
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 
 
 class TestFastLanguageModel:
@@ -265,7 +265,7 @@ class TestGGUFExportFix:
 
     def test_save_pretrained_gguf_requires_model_name(self):
         """Test that save_pretrained_gguf fails gracefully without model_name."""
-        from unsloth_mlx.model import MLXModelWrapper
+        from mlx_tune.model import MLXModelWrapper
 
         # Create a wrapper without model_name
         class MockModel:

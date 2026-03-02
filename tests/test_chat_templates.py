@@ -8,7 +8,7 @@ converted to mlx-lm compatible formats.
 import pytest
 from datasets import Dataset
 
-from unsloth_mlx.chat_templates import (
+from mlx_tune.chat_templates import (
     detect_dataset_format,
     standardize_sharegpt,
     convert_to_mlx_format,
@@ -277,7 +277,7 @@ class TestImports:
 
     def test_imports_from_package(self):
         """Test importing from main package."""
-        from unsloth_mlx import (
+        from mlx_tune import (
             detect_dataset_format,
             standardize_sharegpt,
             convert_to_mlx_format,
@@ -294,7 +294,7 @@ class TestImports:
 
     def test_imports_chat_template_functions(self):
         """Test importing new chat template functions from main package."""
-        from unsloth_mlx import (
+        from mlx_tune import (
             get_chat_template,
             list_chat_templates,
             get_template_info,
@@ -774,7 +774,7 @@ class TestTrainOnResponsesOnlyImport:
 
     def test_import_from_package(self):
         """Test importing from main package."""
-        from unsloth_mlx import train_on_responses_only
+        from mlx_tune import train_on_responses_only
 
         assert callable(train_on_responses_only)
 
@@ -783,7 +783,7 @@ class TestTrainOnResponsesOnlyImport:
 # TESTS FOR PHASE 2: ADVANCED DATASET FEATURES
 # =============================================================================
 
-from unsloth_mlx.chat_templates import (
+from mlx_tune.chat_templates import (
     to_sharegpt,
     apply_column_mapping,
     infer_column_mapping,
@@ -1096,24 +1096,24 @@ class TestPhase2Imports:
 
     def test_imports_to_sharegpt(self):
         """Test importing to_sharegpt from main package."""
-        from unsloth_mlx import to_sharegpt
+        from mlx_tune import to_sharegpt
         assert callable(to_sharegpt)
 
     def test_imports_column_mapping(self):
         """Test importing column mapping functions."""
-        from unsloth_mlx import apply_column_mapping, infer_column_mapping
+        from mlx_tune import apply_column_mapping, infer_column_mapping
         assert callable(apply_column_mapping)
         assert callable(infer_column_mapping)
 
     def test_imports_hf_dataset_config(self):
         """Test importing HFDatasetConfig."""
-        from unsloth_mlx import HFDatasetConfig, load_dataset_with_config
+        from mlx_tune import HFDatasetConfig, load_dataset_with_config
         assert HFDatasetConfig is not None
         assert callable(load_dataset_with_config)
 
     def test_imports_standardize_enhanced(self):
         """Test importing standardize_sharegpt_enhanced."""
-        from unsloth_mlx import standardize_sharegpt_enhanced
+        from mlx_tune import standardize_sharegpt_enhanced
         assert callable(standardize_sharegpt_enhanced)
 
 

@@ -10,10 +10,10 @@ This example demonstrates the FULL workflow:
 6. Save in HuggingFace format
 7. Export to GGUF
 
-This shows how Unsloth-MLX works just like Unsloth!
+This shows how MLX-Tune works just like Unsloth!
 """
 
-from unsloth_mlx import (
+from mlx_tune import (
     FastLanguageModel,
     prepare_dataset,
     format_chat_template,
@@ -26,7 +26,7 @@ from unsloth_mlx import (
 
 def main():
     print("=" * 70)
-    print("Unsloth-MLX Example: Complete Fine-Tuning Workflow")
+    print("MLX-Tune Example: Complete Fine-Tuning Workflow")
     print("=" * 70)
 
     # =========================================================================

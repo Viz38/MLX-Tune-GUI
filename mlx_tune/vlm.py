@@ -1,5 +1,5 @@
 """
-Vision Language Model (VLM) Support for Unsloth-MLX
+Vision Language Model (VLM) Support for MLX-Tune
 
 Provides support for Vision-Language models like:
 - Qwen3-VL (recommended)
@@ -30,7 +30,7 @@ class FastVisionModel:
     - PaliGemma
 
     Example:
-        >>> from unsloth_mlx import FastVisionModel
+        >>> from mlx_tune import FastVisionModel
         >>>
         >>> model, processor = FastVisionModel.from_pretrained(
         ...     model_name="mlx-community/Qwen3-VL-4B-Instruct-4bit",
@@ -250,7 +250,7 @@ class VLMSFTTrainer:
     Fine-tune VLMs on image-text datasets using LoRA.
 
     Example:
-        >>> from unsloth_mlx import FastVisionModel, VLMSFTTrainer
+        >>> from mlx_tune import FastVisionModel, VLMSFTTrainer
         >>>
         >>> model, processor = FastVisionModel.from_pretrained(
         ...     "mlx-community/Qwen3-VL-4B-Instruct-4bit"

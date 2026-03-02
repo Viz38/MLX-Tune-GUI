@@ -1,7 +1,7 @@
 """
 Example 7: Unsloth Pipeline - Direct Comparison
 
-This shows how Unsloth-MLX provides the SAME API as Unsloth.
+This shows how MLX-Tune provides the SAME API as Unsloth.
 Just change the import and it works!
 """
 
@@ -28,11 +28,11 @@ model.save_pretrained_gguf("model", tokenizer, quantization_method="q4_k_m")
 # UNSLOTH-MAC (Ours) - Exact same workflow!
 # ============================================================================
 
-from unsloth_mlx import FastLanguageModel, SFTTrainer  # ← Only change!
+from mlx_tune import FastLanguageModel, SFTTrainer  # ← Only change!
 from datasets import load_dataset
 
 print("=" * 70)
-print("Unsloth-MLX: Exact Same Pipeline as Unsloth")
+print("MLX-Tune: Exact Same Pipeline as Unsloth")
 print("=" * 70)
 
 # 1. Load model - SAME API

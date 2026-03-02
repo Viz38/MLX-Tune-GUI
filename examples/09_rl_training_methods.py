@@ -1,7 +1,7 @@
 """
 Example 9: Reinforcement Learning Training Methods
 
-This example demonstrates Unsloth-MLX's RL training capabilities:
+This example demonstrates MLX-Tune's RL training capabilities:
 - DPO (Direct Preference Optimization)
 - ORPO (Odds Ratio Preference Optimization)
 - GRPO (Group Relative Policy Optimization) - DeepSeek R1 style
@@ -10,7 +10,7 @@ This example demonstrates Unsloth-MLX's RL training capabilities:
 These trainers match the Unsloth/TRL API!
 """
 
-from unsloth_mlx import (
+from mlx_tune import (
     FastLanguageModel,
     # RL Trainers
     DPOTrainer, DPOConfig,
@@ -203,7 +203,7 @@ def show_available_trainers():
     """Show all available training methods."""
 
     print("\n" + "=" * 70)
-    print("Available RL Training Methods in Unsloth-MLX")
+    print("Available RL Training Methods in MLX-Tune")
     print("=" * 70)
 
     trainers = [
@@ -239,7 +239,7 @@ def show_available_trainers():
 
 def main():
     print("=" * 70)
-    print("Unsloth-MLX: Reinforcement Learning Training Methods")
+    print("MLX-Tune: Reinforcement Learning Training Methods")
     print("=" * 70)
     print()
     print("This example shows how to use RL training methods that match")
@@ -249,8 +249,8 @@ def main():
     print("  from unsloth import FastLanguageModel")
     print("  from trl import DPOTrainer, DPOConfig")
     print()
-    print("Unsloth-MLX (Apple Silicon):")
-    print("  from unsloth_mlx import FastLanguageModel, DPOTrainer, DPOConfig")
+    print("MLX-Tune (Apple Silicon):")
+    print("  from mlx_tune import FastLanguageModel, DPOTrainer, DPOConfig")
     print()
 
     show_available_trainers()
@@ -263,7 +263,7 @@ def main():
     print("Summary")
     print("=" * 70)
     print("""
-What you can do with Unsloth-MLX:
+What you can do with MLX-Tune:
 
 1. SFT Training: Basic instruction fine-tuning
    trainer = SFTTrainer(model, train_dataset, args=SFTConfig(...))

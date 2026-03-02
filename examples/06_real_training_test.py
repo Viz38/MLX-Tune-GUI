@@ -5,7 +5,7 @@ This example ACTUALLY trains a model (small number of iterations for testing).
 Tests the complete workflow including SFTTrainer.
 """
 
-from unsloth_mlx import FastLanguageModel, SFTTrainer
+from mlx_tune import FastLanguageModel, SFTTrainer
 import json
 
 

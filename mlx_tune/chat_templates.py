@@ -1,5 +1,5 @@
 """
-Chat Templates and Dataset Formatting for Unsloth-MLX
+Chat Templates and Dataset Formatting for MLX-Tune
 
 This module provides Unsloth-compatible dataset formatting utilities,
 converting various dataset formats to mlx-lm compatible formats.
@@ -554,7 +554,7 @@ def convert_to_mlx_format(
         Dataset in mlx-lm compatible format
 
     Example:
-        >>> from unsloth_mlx.chat_templates import convert_to_mlx_format
+        >>> from mlx_tune.chat_templates import convert_to_mlx_format
         >>> dataset = load_dataset("yahma/alpaca-cleaned", split="train[:100]")
         >>> dataset = convert_to_mlx_format(dataset, tokenizer)
         >>> # Now dataset has 'text' field compatible with mlx-lm
@@ -817,7 +817,7 @@ def get_chat_template(
         Modified tokenizer with chat_template set
 
     Example:
-        >>> from unsloth_mlx import get_chat_template, FastLanguageModel
+        >>> from mlx_tune import get_chat_template, FastLanguageModel
         >>> model, tokenizer = FastLanguageModel.from_pretrained("mlx-community/Llama-3.2-1B-Instruct-4bit")
         >>> tokenizer = get_chat_template(tokenizer, chat_template="llama-3")
         >>> messages = [{"role": "user", "content": "Hello!"}]
@@ -890,7 +890,7 @@ def list_chat_templates() -> List[str]:
         Sorted list of template names
 
     Example:
-        >>> from unsloth_mlx import list_chat_templates
+        >>> from mlx_tune import list_chat_templates
         >>> templates = list_chat_templates()
         >>> print(templates)
         ['alpaca', 'chatml', 'deepseek-v2', 'gemma-2', ...]
@@ -912,7 +912,7 @@ def get_template_info(template_name: str) -> Dict[str, Any]:
         ValueError: If template_name is not found
 
     Example:
-        >>> from unsloth_mlx import get_template_info
+        >>> from mlx_tune import get_template_info
         >>> info = get_template_info("llama-3")
         >>> print(info['eos_token'])
         '<|eot_id|>'
@@ -951,7 +951,7 @@ def get_template_for_model(model_name: str) -> str:
         Recommended template name
 
     Example:
-        >>> from unsloth_mlx import get_template_for_model
+        >>> from mlx_tune import get_template_for_model
         >>> template = get_template_for_model("meta-llama/Llama-3.2-1B-Instruct")
         >>> print(template)
         'llama-3.1'
@@ -1028,7 +1028,7 @@ def train_on_responses_only(
         Modified trainer with response-only training enabled
 
     Example:
-        >>> from unsloth_mlx import SFTTrainer, train_on_responses_only
+        >>> from mlx_tune import SFTTrainer, train_on_responses_only
         >>> trainer = SFTTrainer(model=model, ...)
         >>> trainer = train_on_responses_only(
         ...     trainer,
@@ -1258,7 +1258,7 @@ def to_sharegpt(
         Dataset in ShareGPT format with 'conversations' column
 
     Example:
-        >>> from unsloth_mlx import to_sharegpt, standardize_sharegpt
+        >>> from mlx_tune import to_sharegpt, standardize_sharegpt
         >>> # Convert Alpaca dataset with multi-turn merging
         >>> dataset = to_sharegpt(
         ...     dataset,
@@ -1470,7 +1470,7 @@ def apply_column_mapping(
         Dataset with renamed columns
 
     Example:
-        >>> from unsloth_mlx import apply_column_mapping
+        >>> from mlx_tune import apply_column_mapping
         >>> # Dataset has 'question' and 'answer' columns
         >>> dataset = apply_column_mapping(dataset, {
         ...     "instruction": "question",
@@ -1519,7 +1519,7 @@ def infer_column_mapping(
         Suggested column mapping dictionary
 
     Example:
-        >>> from unsloth_mlx import infer_column_mapping
+        >>> from mlx_tune import infer_column_mapping
         >>> mapping = infer_column_mapping(dataset, target_format="alpaca")
         >>> print(mapping)
         {'instruction': 'question', 'output': 'answer'}
@@ -1607,7 +1607,7 @@ class HFDatasetConfig:
         output_column: Column containing target/output text
 
     Example:
-        >>> from unsloth_mlx import HFDatasetConfig
+        >>> from mlx_tune import HFDatasetConfig
         >>> config = HFDatasetConfig(
         ...     path="Open-Orca/OpenOrca",
         ...     train_split="train[:90%]",
@@ -1758,7 +1758,7 @@ def load_dataset_with_config(
         Processed Dataset ready for training
 
     Example:
-        >>> from unsloth_mlx import load_dataset_with_config
+        >>> from mlx_tune import load_dataset_with_config
         >>> dataset = load_dataset_with_config(
         ...     {"path": "yahma/alpaca-cleaned", "max_samples": 1000},
         ...     tokenizer=tokenizer,
@@ -1813,7 +1813,7 @@ def standardize_sharegpt_enhanced(
         Dataset with standardized ChatML format messages
 
     Example:
-        >>> from unsloth_mlx import standardize_sharegpt_enhanced
+        >>> from mlx_tune import standardize_sharegpt_enhanced
         >>> dataset = standardize_sharegpt_enhanced(
         ...     dataset,
         ...     role_mapping={"human": "person", "gpt": "ai"},

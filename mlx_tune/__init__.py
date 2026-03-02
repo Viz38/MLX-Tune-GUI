@@ -1,5 +1,5 @@
 """
-Unsloth-MLX: MLX-powered LLM fine-tuning for Apple Silicon
+MLX-Tune: MLX-powered LLM fine-tuning for Apple Silicon
 
 A drop-in replacement for Unsloth that uses Apple's MLX framework instead of CUDA/Triton kernels.
 
@@ -13,10 +13,10 @@ Supported Training Methods:
 - VLM (Vision Language Model) fine-tuning
 """
 
-__version__ = "0.3.5"  # Fixed GGUF export + adapter_config.json saving
+__version__ = "0.4.0"  # Renamed to mlx-tune (formerly unsloth-mlx)
 
-from unsloth_mlx.model import FastLanguageModel
-from unsloth_mlx.trainer import (
+from mlx_tune.model import FastLanguageModel
+from mlx_tune.trainer import (
     prepare_dataset,
     format_chat_template,
     create_training_data,
@@ -24,10 +24,10 @@ from unsloth_mlx.trainer import (
     export_to_gguf,
     get_training_config,
 )
-from unsloth_mlx.sft_trainer import SFTTrainer, SFTConfig, TrainingArguments
+from mlx_tune.sft_trainer import SFTTrainer, SFTConfig, TrainingArguments
 
 # RL Trainers
-from unsloth_mlx.rl_trainers import (
+from mlx_tune.rl_trainers import (
     DPOTrainer,
     DPOConfig,
     ORPOTrainer,
@@ -41,7 +41,7 @@ from unsloth_mlx.rl_trainers import (
 )
 
 # Loss functions for custom training
-from unsloth_mlx.losses import (
+from mlx_tune.losses import (
     compute_log_probs,
     compute_log_probs_with_lengths,
     dpo_loss,
@@ -55,14 +55,14 @@ from unsloth_mlx.losses import (
 )
 
 # Vision Language Models
-from unsloth_mlx.vlm import (
+from mlx_tune.vlm import (
     FastVisionModel,
     VLMSFTTrainer,
     load_vlm_dataset,
 )
 
 # Chat Templates and Dataset Formatting (Unsloth-compatible)
-from unsloth_mlx.chat_templates import (
+from mlx_tune.chat_templates import (
     # Dataset format detection and conversion
     detect_dataset_format,
     standardize_sharegpt,

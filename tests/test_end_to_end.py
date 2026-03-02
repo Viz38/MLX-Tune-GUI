@@ -23,7 +23,7 @@ class TestSFTEndToEnd:
     @pytest.fixture(scope="class")
     def trained_model_dir(self):
         """Train a model and return the output directory."""
-        from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
+        from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
         from datasets import Dataset
 
         # Load model
@@ -154,7 +154,7 @@ class TestGGUFExport:
         This was GitHub issue #3 - save_pretrained_gguf was passing
         the output directory as the model path.
         """
-        from unsloth_mlx import FastLanguageModel
+        from mlx_tune import FastLanguageModel
 
         model, tokenizer = FastLanguageModel.from_pretrained(
             "mlx-community/Llama-3.2-1B-Instruct-4bit",
@@ -166,7 +166,7 @@ class TestGGUFExport:
 
     def test_gguf_export_detects_adapter_path(self):
         """Test that GGUF export finds adapter path when LoRA is applied."""
-        from unsloth_mlx import FastLanguageModel
+        from mlx_tune import FastLanguageModel
         import tempfile
 
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -186,7 +186,7 @@ class TestRLTrainersEndToEnd:
 
     def test_dpo_trainer_saves_adapter_config(self):
         """Test that DPOTrainer saves adapter_config.json."""
-        from unsloth_mlx import FastLanguageModel, DPOTrainer, DPOConfig
+        from mlx_tune import FastLanguageModel, DPOTrainer, DPOConfig
         import tempfile
 
         model, tokenizer = FastLanguageModel.from_pretrained(
@@ -227,7 +227,7 @@ class TestMergedModelSave:
     @pytest.fixture
     def trained_model(self):
         """Fixture providing a model with LoRA that has been 'trained'."""
-        from unsloth_mlx import FastLanguageModel
+        from mlx_tune import FastLanguageModel
 
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
@@ -305,7 +305,7 @@ class TestLoadAdapter:
 
     def test_load_adapter_method_exists(self):
         """Test that load_adapter method is available."""
-        from unsloth_mlx import FastLanguageModel
+        from mlx_tune import FastLanguageModel
 
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
@@ -317,7 +317,7 @@ class TestLoadAdapter:
 
     def test_load_adapter_requires_files(self):
         """Test that load_adapter fails gracefully with missing files."""
-        from unsloth_mlx import FastLanguageModel
+        from mlx_tune import FastLanguageModel
 
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",

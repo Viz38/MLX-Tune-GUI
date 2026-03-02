@@ -25,7 +25,7 @@ pytestmark = pytest.mark.integration
 @pytest.fixture(scope="module")
 def model_and_tokenizer():
     """Load model once for all tests in this module."""
-    from unsloth_mlx import FastLanguageModel
+    from mlx_tune import FastLanguageModel
 
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
@@ -38,7 +38,7 @@ def model_and_tokenizer():
 @pytest.fixture(scope="module")
 def model_with_lora(model_and_tokenizer):
     """Get model with LoRA applied."""
-    from unsloth_mlx import FastLanguageModel
+    from mlx_tune import FastLanguageModel
 
     model, tokenizer = model_and_tokenizer
 
@@ -235,7 +235,7 @@ class TestTrainingDataPreparation:
 
     def test_prepare_dataset_from_hub(self):
         """Test loading dataset from HuggingFace Hub."""
-        from unsloth_mlx.trainer import prepare_dataset
+        from mlx_tune.trainer import prepare_dataset
 
         # Load a tiny slice
         dataset = prepare_dataset(
@@ -248,7 +248,7 @@ class TestTrainingDataPreparation:
 
     def test_create_training_data_jsonl(self, model_and_tokenizer):
         """Test creating JSONL training data."""
-        from unsloth_mlx.trainer import create_training_data
+        from mlx_tune.trainer import create_training_data
         from datasets import Dataset
 
         model, tokenizer = model_and_tokenizer
@@ -285,7 +285,7 @@ class TestFullPipeline:
 
     def test_sft_trainer_initialization(self, model_with_lora):
         """Test SFTTrainer can be initialized."""
-        from unsloth_mlx import SFTTrainer, SFTConfig
+        from mlx_tune import SFTTrainer, SFTConfig
         from datasets import Dataset
 
         model, tokenizer = model_with_lora
@@ -314,7 +314,7 @@ class TestFullPipeline:
 
         This is the first thing users try - it MUST work.
         """
-        from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
+        from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
         from datasets import load_dataset
 
         # Load model (same as Quick Start)

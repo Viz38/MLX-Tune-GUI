@@ -1,5 +1,5 @@
 """
-Training utilities for Unsloth-MLX
+Training utilities for MLX-Tune
 
 Provides helper functions for loading datasets, training models, and saving results
 in standard HuggingFace format.
@@ -423,9 +423,9 @@ def export_to_gguf(
         if "adapter_config.json" in error_msg.lower():
             print("\n⚠️  Adapter config not found. This usually means:")
             print("   1. The adapter path is missing adapter_config.json")
-            print("   2. Training was done with an older version of unsloth-mlx")
+            print("   2. Training was done with an older version of mlx-tune")
             print(f"\n   To fix, either:")
-            print(f"   a) Re-train with unsloth-mlx >= 0.3.4 (saves adapter_config.json)")
+            print(f"   a) Re-train with mlx-tune >= 0.3.4 (saves adapter_config.json)")
             print(f"   b) Export without adapters (base model only):")
             print(f"      model.save_pretrained_gguf('model', tokenizer)")
             if adapter_path:

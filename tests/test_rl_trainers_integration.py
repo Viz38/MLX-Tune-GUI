@@ -165,7 +165,7 @@ class TestDPOTrainerIntegration:
 
     def test_dpo_trainer_init(self, small_model, mock_tokenizer, preference_dataset):
         """Test DPOTrainer can be initialized."""
-        from unsloth_mlx import DPOTrainer, DPOConfig
+        from mlx_tune import DPOTrainer, DPOConfig
 
         config = DPOConfig(
             beta=0.1,
@@ -187,7 +187,7 @@ class TestDPOTrainerIntegration:
 
     def test_dpo_trainer_train_runs(self, small_model, mock_tokenizer, preference_dataset):
         """Test DPOTrainer.train() executes without errors."""
-        from unsloth_mlx import DPOTrainer, DPOConfig
+        from mlx_tune import DPOTrainer, DPOConfig
 
         config = DPOConfig(
             beta=0.1,
@@ -212,7 +212,7 @@ class TestDPOTrainerIntegration:
 
     def test_dpo_loss_decreases(self, small_model, mock_tokenizer, preference_dataset):
         """Test that DPO loss decreases or stays stable during training."""
-        from unsloth_mlx import DPOTrainer, DPOConfig
+        from mlx_tune import DPOTrainer, DPOConfig
 
         config = DPOConfig(
             beta=0.1,
@@ -236,7 +236,7 @@ class TestDPOTrainerIntegration:
 
     def test_dpo_different_loss_types(self, small_model, mock_tokenizer, preference_dataset):
         """Test DPO with different loss types."""
-        from unsloth_mlx import DPOTrainer, DPOConfig
+        from mlx_tune import DPOTrainer, DPOConfig
 
         loss_types = ["sigmoid", "hinge", "ipo"]
 
@@ -275,7 +275,7 @@ class TestORPOTrainerIntegration:
 
     def test_orpo_trainer_init(self, small_model, mock_tokenizer, preference_dataset):
         """Test ORPOTrainer can be initialized."""
-        from unsloth_mlx import ORPOTrainer, ORPOConfig
+        from mlx_tune import ORPOTrainer, ORPOConfig
 
         config = ORPOConfig(
             beta=0.1,
@@ -296,7 +296,7 @@ class TestORPOTrainerIntegration:
 
     def test_orpo_trainer_train_runs(self, small_model, mock_tokenizer, preference_dataset):
         """Test ORPOTrainer.train() executes without errors."""
-        from unsloth_mlx import ORPOTrainer, ORPOConfig
+        from mlx_tune import ORPOTrainer, ORPOConfig
 
         config = ORPOConfig(
             beta=0.1,
@@ -317,7 +317,7 @@ class TestORPOTrainerIntegration:
 
     def test_orpo_combines_sft_and_preference(self, small_model, mock_tokenizer, preference_dataset):
         """Test that ORPO combines SFT and preference learning."""
-        from unsloth_mlx import ORPOTrainer, ORPOConfig
+        from mlx_tune import ORPOTrainer, ORPOConfig
 
         config = ORPOConfig(
             beta=0.1,
@@ -349,7 +349,7 @@ class TestGRPOTrainerIntegration:
 
     def test_grpo_trainer_init(self, small_model, mock_tokenizer, grpo_dataset):
         """Test GRPOTrainer can be initialized."""
-        from unsloth_mlx import GRPOTrainer, GRPOConfig, create_reward_function
+        from mlx_tune import GRPOTrainer, GRPOConfig, create_reward_function
 
         reward_fn = create_reward_function("simple")
 
@@ -375,7 +375,7 @@ class TestGRPOTrainerIntegration:
 
     def test_grpo_trainer_train_runs(self, small_model, mock_tokenizer, grpo_dataset):
         """Test GRPOTrainer.train() executes without errors."""
-        from unsloth_mlx import GRPOTrainer, GRPOConfig, create_reward_function
+        from mlx_tune import GRPOTrainer, GRPOConfig, create_reward_function
 
         reward_fn = create_reward_function("simple")
 
@@ -401,7 +401,7 @@ class TestGRPOTrainerIntegration:
 
     def test_grpo_multi_generation(self, small_model, mock_tokenizer, grpo_dataset):
         """Test that GRPO generates multiple completions per prompt."""
-        from unsloth_mlx import GRPOTrainer, GRPOConfig, create_reward_function
+        from mlx_tune import GRPOTrainer, GRPOConfig, create_reward_function
 
         reward_fn = create_reward_function("simple")
         num_gens = 3
@@ -431,7 +431,7 @@ class TestGRPOTrainerIntegration:
 
     def test_grpo_with_math_reward(self, small_model, mock_tokenizer, grpo_dataset):
         """Test GRPO with math reward function."""
-        from unsloth_mlx import GRPOTrainer, GRPOConfig, create_reward_function
+        from mlx_tune import GRPOTrainer, GRPOConfig, create_reward_function
 
         math_reward = create_reward_function("math")
 
@@ -456,7 +456,7 @@ class TestGRPOTrainerIntegration:
 
     def test_grpo_different_loss_types(self, small_model, mock_tokenizer, grpo_dataset):
         """Test GRPO with different loss types (grpo, dr_grpo, dapo, bnpo)."""
-        from unsloth_mlx import GRPOTrainer, GRPOConfig, create_reward_function
+        from mlx_tune import GRPOTrainer, GRPOConfig, create_reward_function
 
         reward_fn = create_reward_function("simple")
         loss_types = ["grpo", "dr_grpo", "dapo", "bnpo"]
@@ -487,7 +487,7 @@ class TestGRPOTrainerIntegration:
 
     def test_grpo_custom_reward_function(self, small_model, mock_tokenizer, grpo_dataset):
         """Test GRPO with a custom reward function."""
-        from unsloth_mlx import GRPOTrainer, GRPOConfig
+        from mlx_tune import GRPOTrainer, GRPOConfig
 
         # Custom reward: reward longer responses
         def length_reward(response: str, answer: str = None) -> float:
@@ -523,7 +523,7 @@ class TestKTOTrainerIntegration:
 
     def test_kto_trainer_init(self, small_model, mock_tokenizer, kto_dataset):
         """Test KTOTrainer can be initialized."""
-        from unsloth_mlx import KTOTrainer
+        from mlx_tune import KTOTrainer
 
         trainer = KTOTrainer(
             model=small_model,
@@ -537,7 +537,7 @@ class TestKTOTrainerIntegration:
 
     def test_kto_trainer_train_runs(self, small_model, mock_tokenizer, kto_dataset):
         """Test KTOTrainer.train() executes without errors."""
-        from unsloth_mlx import KTOTrainer
+        from mlx_tune import KTOTrainer
 
         trainer = KTOTrainer(
             model=small_model,
@@ -552,7 +552,7 @@ class TestKTOTrainerIntegration:
 
     def test_kto_binary_feedback(self, small_model, mock_tokenizer, kto_dataset):
         """Test KTO processes binary feedback correctly."""
-        from unsloth_mlx import KTOTrainer
+        from mlx_tune import KTOTrainer
 
         # Ensure dataset has both positive and negative examples
         assert any(d['label'] == 1 for d in kto_dataset), "Need positive examples"
@@ -580,7 +580,7 @@ class TestSimPOTrainerIntegration:
 
     def test_simpo_trainer_init(self, small_model, mock_tokenizer, preference_dataset):
         """Test SimPOTrainer can be initialized."""
-        from unsloth_mlx import SimPOTrainer
+        from mlx_tune import SimPOTrainer
 
         trainer = SimPOTrainer(
             model=small_model,
@@ -594,7 +594,7 @@ class TestSimPOTrainerIntegration:
 
     def test_simpo_trainer_train_runs(self, small_model, mock_tokenizer, preference_dataset):
         """Test SimPOTrainer.train() executes without errors."""
-        from unsloth_mlx import SimPOTrainer
+        from mlx_tune import SimPOTrainer
 
         trainer = SimPOTrainer(
             model=small_model,
@@ -609,7 +609,7 @@ class TestSimPOTrainerIntegration:
 
     def test_simpo_no_reference_model(self, small_model, mock_tokenizer, preference_dataset):
         """Test SimPO works without reference model."""
-        from unsloth_mlx import SimPOTrainer
+        from mlx_tune import SimPOTrainer
 
         # SimPO is special: it doesn't require a reference model
         trainer = SimPOTrainer(
@@ -645,7 +645,7 @@ class TestGradientFlow:
 
     def test_dpo_gradient_not_zero(self):
         """Test DPO computes non-zero gradients."""
-        from unsloth_mlx.losses import dpo_loss
+        from mlx_tune.losses import dpo_loss
 
         model = SmallLanguageModel(vocab_size=50, hidden_size=32)
         mx.eval(model.parameters())
@@ -672,7 +672,7 @@ class TestGradientFlow:
 
     def test_orpo_gradient_not_zero(self):
         """Test ORPO computes non-zero gradients."""
-        from unsloth_mlx.losses import orpo_loss
+        from mlx_tune.losses import orpo_loss
 
         model = SmallLanguageModel(vocab_size=50, hidden_size=32)
         mx.eval(model.parameters())
@@ -705,7 +705,7 @@ class TestLossStability:
 
     def test_dpo_loss_stability(self):
         """Test DPO loss doesn't produce NaN or Inf."""
-        from unsloth_mlx.losses import dpo_loss
+        from mlx_tune.losses import dpo_loss
 
         model = SmallLanguageModel(vocab_size=50, hidden_size=32)
         mx.eval(model.parameters())
@@ -725,7 +725,7 @@ class TestLossStability:
 
     def test_orpo_loss_stability(self):
         """Test ORPO loss doesn't produce NaN or Inf."""
-        from unsloth_mlx.losses import orpo_loss
+        from mlx_tune.losses import orpo_loss
 
         model = SmallLanguageModel(vocab_size=50, hidden_size=32)
         mx.eval(model.parameters())
@@ -744,7 +744,7 @@ class TestLossStability:
 
     def test_simpo_loss_stability(self):
         """Test SimPO loss doesn't produce NaN or Inf."""
-        from unsloth_mlx.losses import simpo_loss
+        from mlx_tune.losses import simpo_loss
 
         model = SmallLanguageModel(vocab_size=50, hidden_size=32)
         mx.eval(model.parameters())
@@ -772,7 +772,7 @@ class TestRewardFunctions:
 
     def test_simple_reward_function(self):
         """Test simple reward function."""
-        from unsloth_mlx import create_reward_function
+        from mlx_tune import create_reward_function
 
         reward_fn = create_reward_function("simple")
 
@@ -786,7 +786,7 @@ class TestRewardFunctions:
 
     def test_math_reward_function(self):
         """Test math reward function."""
-        from unsloth_mlx import create_reward_function
+        from mlx_tune import create_reward_function
 
         reward_fn = create_reward_function("math")
 
@@ -799,7 +799,7 @@ class TestRewardFunctions:
 
     def test_length_reward_function(self):
         """Test length-based reward function."""
-        from unsloth_mlx import create_reward_function
+        from mlx_tune import create_reward_function
 
         reward_fn = create_reward_function("length")
 

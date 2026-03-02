@@ -1,5 +1,5 @@
 """
-Unit tests for trainers in unsloth_mlx
+Unit tests for trainers in mlx_tune
 """
 
 import pytest
@@ -13,7 +13,7 @@ class TestSFTConfig:
 
     def test_sftconfig_defaults(self):
         """Test SFTConfig has correct defaults."""
-        from unsloth_mlx import SFTConfig
+        from mlx_tune import SFTConfig
 
         config = SFTConfig()
 
@@ -26,7 +26,7 @@ class TestSFTConfig:
 
     def test_sftconfig_custom_values(self):
         """Test SFTConfig with custom values."""
-        from unsloth_mlx import SFTConfig
+        from mlx_tune import SFTConfig
 
         config = SFTConfig(
             output_dir="./custom_output",
@@ -42,7 +42,7 @@ class TestSFTConfig:
 
     def test_sftconfig_to_dict(self):
         """Test SFTConfig to_dict method."""
-        from unsloth_mlx import SFTConfig
+        from mlx_tune import SFTConfig
 
         config = SFTConfig(learning_rate=1e-4)
         config_dict = config.to_dict()
@@ -57,7 +57,7 @@ class TestDPOConfig:
 
     def test_dpoconfig_defaults(self):
         """Test DPOConfig has correct defaults."""
-        from unsloth_mlx import DPOConfig
+        from mlx_tune import DPOConfig
 
         config = DPOConfig()
 
@@ -67,7 +67,7 @@ class TestDPOConfig:
 
     def test_dpoconfig_custom_beta(self):
         """Test DPOConfig with custom beta."""
-        from unsloth_mlx import DPOConfig
+        from mlx_tune import DPOConfig
 
         config = DPOConfig(beta=0.5)
 
@@ -79,7 +79,7 @@ class TestGRPOConfig:
 
     def test_grpoconfig_defaults(self):
         """Test GRPOConfig has correct defaults."""
-        from unsloth_mlx import GRPOConfig
+        from mlx_tune import GRPOConfig
 
         config = GRPOConfig()
 
@@ -90,7 +90,7 @@ class TestGRPOConfig:
 
     def test_grpoconfig_with_reward_fn(self):
         """Test GRPOConfig with custom reward function."""
-        from unsloth_mlx import GRPOConfig
+        from mlx_tune import GRPOConfig
 
         def custom_reward(response, prompt):
             return 1.0
@@ -106,7 +106,7 @@ class TestTrainerInitialization:
 
     def test_imports_work(self):
         """Test all trainers can be imported."""
-        from unsloth_mlx import (
+        from mlx_tune import (
             SFTTrainer,
             SFTConfig,
             DPOTrainer,
@@ -133,7 +133,7 @@ class TestLossFunctionImports:
 
     def test_loss_imports(self):
         """Test all loss functions can be imported."""
-        from unsloth_mlx import (
+        from mlx_tune import (
             compute_log_probs,
             compute_log_probs_with_lengths,
             dpo_loss,
@@ -157,17 +157,17 @@ class TestUtilityFunctions:
 
     def test_prepare_dataset_import(self):
         """Test prepare_dataset can be imported."""
-        from unsloth_mlx import prepare_dataset
+        from mlx_tune import prepare_dataset
         assert prepare_dataset is not None
 
     def test_prepare_preference_dataset_import(self):
         """Test prepare_preference_dataset can be imported."""
-        from unsloth_mlx import prepare_preference_dataset
+        from mlx_tune import prepare_preference_dataset
         assert prepare_preference_dataset is not None
 
     def test_create_reward_function_simple(self):
         """Test create_reward_function with simple type."""
-        from unsloth_mlx import create_reward_function
+        from mlx_tune import create_reward_function
 
         reward_fn = create_reward_function("simple")
 
@@ -180,7 +180,7 @@ class TestUtilityFunctions:
 
     def test_create_reward_function_math(self):
         """Test create_reward_function with math type."""
-        from unsloth_mlx import create_reward_function
+        from mlx_tune import create_reward_function
 
         reward_fn = create_reward_function("math")
 
@@ -193,7 +193,7 @@ class TestUtilityFunctions:
 
     def test_create_reward_function_length(self):
         """Test create_reward_function with length type."""
-        from unsloth_mlx import create_reward_function
+        from mlx_tune import create_reward_function
 
         reward_fn = create_reward_function("length")
 
@@ -211,7 +211,7 @@ class TestExportFunctions:
 
     def test_get_training_config(self):
         """Test get_training_config returns correct structure."""
-        from unsloth_mlx import get_training_config
+        from mlx_tune import get_training_config
 
         config = get_training_config(
             output_dir="./test_output",

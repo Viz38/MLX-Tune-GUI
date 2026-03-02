@@ -1,15 +1,15 @@
 """
 Example 1: Simple Model Loading
 
-This example demonstrates how to load a model using Unsloth-MLX,
+This example demonstrates how to load a model using MLX-Tune,
 showing the API compatibility with Unsloth.
 """
 
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 
 def main():
     print("=" * 60)
-    print("Unsloth-MLX Example: Simple Model Loading")
+    print("MLX-Tune Example: Simple Model Loading")
     print("=" * 60)
 
     # Load a small quantized model from MLX community

@@ -1,5 +1,5 @@
 """
-SFTTrainer - Supervised Fine-Tuning Trainer for Unsloth-MLX
+SFTTrainer - Supervised Fine-Tuning Trainer for MLX-Tune
 
 Provides Unsloth/TRL-compatible training interface using MLX under the hood.
 Supports both native MLX training and subprocess fallback.
@@ -43,7 +43,7 @@ class SFTConfig:
     to use the same configuration pattern as the original Unsloth.
 
     Example:
-        >>> from unsloth_mlx import SFTTrainer, SFTConfig
+        >>> from mlx_tune import SFTTrainer, SFTConfig
         >>>
         >>> config = SFTConfig(
         ...     per_device_train_batch_size=2,
@@ -139,7 +139,7 @@ class SFTTrainer:
     MLX's training capabilities under the hood.
 
     Example:
-        >>> from unsloth_mlx import FastLanguageModel, SFTTrainer
+        >>> from mlx_tune import FastLanguageModel, SFTTrainer
         >>>
         >>> model, tokenizer = FastLanguageModel.from_pretrained(...)
         >>> model = FastLanguageModel.get_peft_model(model, r=16)
@@ -425,7 +425,7 @@ class SFTTrainer:
         - Text: {"text": "..."}
         - Completions: {"prompt": "...", "completion": "..."}
         """
-        from unsloth_mlx.chat_templates import (
+        from mlx_tune.chat_templates import (
             detect_dataset_format,
             alpaca_to_text,
             apply_chat_template_to_sample,

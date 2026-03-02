@@ -1,6 +1,6 @@
-# Quick Start Guide - Unsloth-MLX
+# Quick Start Guide - MLX-Tune
 
-Get started with Unsloth-MLX in under 5 minutes!
+Get started with MLX-Tune in under 5 minutes!
 
 ## Installation
 
@@ -10,17 +10,17 @@ Get started with Unsloth-MLX in under 5 minutes!
 - Python 3.9+
 - 16GB+ RAM (32GB+ recommended for larger models)
 
-### Install Unsloth-MLX
+### Install MLX-Tune
 
 ```bash
-pip install unsloth-mlx
+pip install mlx-tune
 ```
 
 Or install from source:
 
 ```bash
-git clone https://github.com/yourusername/unsloth-mlx.git
-cd unsloth-mlx
+git clone https://github.com/yourusername/mlx-tune.git
+cd mlx-tune
 pip install -e .
 ```
 
@@ -29,7 +29,7 @@ pip install -e .
 ### 1. Load a Model
 
 ```python
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 
 # Load a quantized model from MLX community
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -100,9 +100,9 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 )
 ```
 
-**After (Unsloth-MLX with MLX):**
+**After (MLX-Tune with MLX):**
 ```python
-from unsloth_mlx import FastLanguageModel  # ← Only change!
+from mlx_tune import FastLanguageModel  # ← Only change!
 
 # For MLX, use mlx-community models
 model, tokenizer = FastLanguageModel.from_pretrained(
@@ -126,7 +126,7 @@ Create a JSONL file with your training data:
 ### Step 2: Load and Configure Model
 
 ```python
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 
 model, tokenizer = FastLanguageModel.from_pretrained(
     model_name="mlx-community/Llama-3.2-3B-Instruct-4bit",

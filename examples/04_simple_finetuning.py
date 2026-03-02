@@ -1,7 +1,7 @@
 """
 Example 4: Simple Fine-Tuning with LoRA
 
-This example demonstrates a complete fine-tuning workflow using Unsloth-MLX.
+This example demonstrates a complete fine-tuning workflow using MLX-Tune.
 Note: This example shows the API setup. Actual training would require using
 MLX's training utilities (mlx_lm.lora command or custom training loop).
 
@@ -12,7 +12,7 @@ For actual fine-tuning, you would typically use:
 This example shows how to set up the model with Unsloth-compatible API.
 """
 
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 import json
 
 
@@ -46,7 +46,7 @@ def create_sample_dataset():
 
 def main():
     print("=" * 60)
-    print("Unsloth-MLX Example: Fine-Tuning Setup")
+    print("MLX-Tune Example: Fine-Tuning Setup")
     print("=" * 60)
 
     # Step 1: Load the base model
