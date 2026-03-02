@@ -1,7 +1,7 @@
 """
 Example 8: Exact Unsloth Pipeline - Complete API Compatibility
 
-This example shows that Unsloth-MLX provides the EXACT same API as Unsloth.
+This example shows that MLX-Tune provides the EXACT same API as Unsloth.
 Just change the import line and your Unsloth code works on Mac!
 
 ORIGINAL UNSLOTH CODE (for CUDA):
@@ -12,7 +12,7 @@ from datasets import load_dataset
 
 UNSLOTH-MAC CODE (for Apple Silicon):
 -------------------------------------
-from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
+from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
 from datasets import load_dataset
 
 The rest of the code is IDENTICAL!
@@ -26,8 +26,8 @@ The rest of the code is IDENTICAL!
 # from unsloth import FastLanguageModel
 # from trl import SFTTrainer, SFTConfig
 
-# For Unsloth-MLX (Apple Silicon MLX):
-from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
+# For MLX-Tune (Apple Silicon MLX):
+from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
 from datasets import load_dataset
 
 
@@ -230,8 +230,8 @@ API COMPATIBILITY SUMMARY:
 
 MIGRATION GUIDE:
 ---------------
-1. Change import: from unsloth import -> from unsloth_mlx import
-2. Change import: from trl import SFTTrainer, SFTConfig -> already in unsloth_mlx
+1. Change import: from unsloth import -> from mlx_tune import
+2. Change import: from trl import SFTTrainer, SFTConfig -> already in mlx_tune
 3. Use mlx-community models instead of unsloth/ models
 4. That's it! Rest of the code is IDENTICAL!
 """)

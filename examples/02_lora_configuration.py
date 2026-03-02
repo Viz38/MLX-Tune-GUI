@@ -5,11 +5,11 @@ This example demonstrates how to add LoRA adapters to a model,
 showing compatibility with Unsloth's get_peft_model API.
 """
 
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 
 def main():
     print("=" * 60)
-    print("Unsloth-MLX Example: LoRA Configuration")
+    print("MLX-Tune Example: LoRA Configuration")
     print("=" * 60)
 
     # Load a model

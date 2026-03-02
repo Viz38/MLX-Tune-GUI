@@ -1,5 +1,5 @@
 """
-Unit tests for loss functions in unsloth_mlx.losses
+Unit tests for loss functions in mlx_tune.losses
 """
 
 import pytest
@@ -12,7 +12,7 @@ class TestComputeLogProbs:
 
     def test_compute_log_probs_shape(self):
         """Test output shape of compute_log_probs."""
-        from unsloth_mlx.losses import compute_log_probs_with_lengths
+        from mlx_tune.losses import compute_log_probs_with_lengths
 
         # Create a simple mock model
         class MockModel(nn.Module):
@@ -39,7 +39,7 @@ class TestComputeLogProbs:
 
     def test_compute_log_probs_values(self):
         """Test that log probs are negative (as expected for probabilities)."""
-        from unsloth_mlx.losses import compute_log_probs_with_lengths
+        from mlx_tune.losses import compute_log_probs_with_lengths
 
         class MockModel(nn.Module):
             def __init__(self):
@@ -68,7 +68,7 @@ class TestDPOLoss:
 
     def test_dpo_loss_shape(self):
         """Test DPO loss returns scalar."""
-        from unsloth_mlx.losses import dpo_loss
+        from mlx_tune.losses import dpo_loss
 
         class MockModel(nn.Module):
             def __init__(self):
@@ -100,7 +100,7 @@ class TestDPOLoss:
 
     def test_dpo_loss_beta_effect(self):
         """Test that higher beta increases loss magnitude."""
-        from unsloth_mlx.losses import dpo_loss
+        from mlx_tune.losses import dpo_loss
 
         class MockModel(nn.Module):
             def __init__(self):
@@ -136,7 +136,7 @@ class TestORPOLoss:
 
     def test_orpo_loss_shape(self):
         """Test ORPO loss returns scalar."""
-        from unsloth_mlx.losses import orpo_loss
+        from mlx_tune.losses import orpo_loss
 
         class MockModel(nn.Module):
             def __init__(self):
@@ -166,7 +166,7 @@ class TestSimPOLoss:
 
     def test_simpo_loss_shape(self):
         """Test SimPO loss returns scalar."""
-        from unsloth_mlx.losses import simpo_loss
+        from mlx_tune.losses import simpo_loss
 
         class MockModel(nn.Module):
             def __init__(self):
@@ -197,7 +197,7 @@ class TestSFTLoss:
 
     def test_sft_loss_shape(self):
         """Test SFT loss returns scalar."""
-        from unsloth_mlx.losses import sft_loss
+        from mlx_tune.losses import sft_loss
 
         class MockModel(nn.Module):
             def __init__(self):

@@ -1,5 +1,5 @@
 """
-Loss functions for Unsloth-MLX RL training.
+Loss functions for MLX-Tune RL training.
 
 Provides proper loss implementations for:
 - DPO (Direct Preference Optimization)

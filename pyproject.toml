@@ -3,16 +3,16 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "unsloth-mlx"
-version = "0.3.5"
-description = "MLX-powered LLM fine-tuning for Apple Silicon - A drop-in replacement for Unsloth"
+name = "mlx-tune"
+version = "0.4.0"
+description = "MLX-powered LLM fine-tuning for Apple Silicon - Unsloth-compatible API for Mac"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "Unsloth-MLX Contributors"}
+    {name = "MLX-Tune Contributors"}
 ]
-keywords = ["llm", "fine-tuning", "mlx", "apple-silicon", "lora", "unsloth", "mac"]
+keywords = ["llm", "fine-tuning", "mlx", "apple-silicon", "lora", "unsloth", "mac", "mlx-tune"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -54,17 +54,17 @@ train = [
     "wandb>=0.15.0",
 ]
 all = [
-    "unsloth-mlx[dev,train,vlm]",
+    "mlx-tune[dev,train,vlm]",
 ]
 
 [project.urls]
-Homepage = "https://github.com/ARahim3/unsloth-mlx"
-Documentation = "https://github.com/ARahim3/unsloth-mlx#readme"
-Repository = "https://github.com/ARahim3/unsloth-mlx"
-Issues = "https://github.com/ARahim3/unsloth-mlx/issues"
+Homepage = "https://github.com/ARahim3/mlx-tune"
+Documentation = "https://github.com/ARahim3/mlx-tune#readme"
+Repository = "https://github.com/ARahim3/mlx-tune"
+Issues = "https://github.com/ARahim3/mlx-tune/issues"
 
 [tool.setuptools.packages.find]
-include = ["unsloth_mlx*"]
+include = ["mlx_tune*"]
 
 [tool.black]
 line-length = 100
@@ -79,7 +79,7 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --cov=unsloth_mlx --cov-report=term-missing"
+addopts = "-v --cov=mlx_tune --cov-report=term-missing"
 markers = [
     "integration: marks tests as integration tests (require network, slower)",
 ]

@@ -1,5 +1,5 @@
 """
-FastLanguageModel - Main API entry point for Unsloth-MLX
+FastLanguageModel - Main API entry point for MLX-Tune
 
 This module provides Unsloth-compatible API for loading and configuring language models
 using Apple's MLX framework under the hood.
@@ -32,7 +32,7 @@ class FastLanguageModel:
     MLX for Apple Silicon optimization instead of CUDA/Triton kernels.
 
     Example:
-        >>> from unsloth_mlx import FastLanguageModel
+        >>> from mlx_tune import FastLanguageModel
         >>> model, tokenizer = FastLanguageModel.from_pretrained(
         ...     model_name="mlx-community/Llama-3.2-3B-Instruct-4bit",
         ...     max_seq_length=2048,
@@ -654,7 +654,7 @@ class MLXModelWrapper:
             raise FileNotFoundError(
                 f"adapter_config.json not found in {adapter_path}. "
                 "This file is required by mlx_lm to load adapters. "
-                "Re-train with unsloth-mlx >= 0.3.4 which saves this file."
+                "Re-train with mlx-tune >= 0.3.4 which saves this file."
             )
 
         print(f"Loading adapters from {adapter_path}...")
@@ -690,7 +690,7 @@ class MLXModelWrapper:
         Example:
             >>> model.save_pretrained_merged("merged_model", tokenizer)
         """
-        from unsloth_mlx.trainer import save_model_hf_format
+        from mlx_tune.trainer import save_model_hf_format
 
         print(f"Saving merged model to {output_dir}...")
         save_model_hf_format(self, tokenizer, output_dir, **kwargs)
@@ -725,7 +725,7 @@ class MLXModelWrapper:
 
         Important - Quantized Model Limitation:
             GGUF export from quantized (4-bit) base models is NOT supported by mlx_lm.
-            This is an upstream limitation, not an unsloth-mlx bug.
+            This is an upstream limitation, not an mlx-tune bug.
             See: https://github.com/ml-explore/mlx-lm/issues/353
 
             Workarounds:
@@ -737,7 +737,7 @@ class MLXModelWrapper:
             - Supported architectures: Llama, Mistral, Mixtral
             - Output is fp16 precision (use llama.cpp to quantize further)
         """
-        from unsloth_mlx.trainer import export_to_gguf
+        from mlx_tune.trainer import export_to_gguf
         from pathlib import Path
 
         output_path = Path(output_dir)

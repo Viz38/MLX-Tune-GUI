@@ -1,15 +1,15 @@
 """
-Example 3: Inference with Unsloth-MLX
+Example 3: Inference with MLX-Tune
 
 This example demonstrates how to use the model for text generation,
 showing compatibility with Unsloth's inference API.
 """
 
-from unsloth_mlx import FastLanguageModel
+from mlx_tune import FastLanguageModel
 
 def main():
     print("=" * 60)
-    print("Unsloth-MLX Example: Inference")
+    print("MLX-Tune Example: Inference")
     print("=" * 60)
 
     # Load model

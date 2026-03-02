@@ -1,5 +1,5 @@
 """
-Reinforcement Learning Trainers for Unsloth-MLX
+Reinforcement Learning Trainers for MLX-Tune
 
 Provides Unsloth/TRL-compatible RL training interfaces:
 - DPOTrainer: Direct Preference Optimization
@@ -30,7 +30,7 @@ except ImportError:
     HAS_NATIVE_TRAINING = False
 
 # Import our loss functions
-from unsloth_mlx.losses import (
+from mlx_tune.losses import (
     dpo_loss as compute_dpo_loss,
     orpo_loss as compute_orpo_loss,
     kto_loss as compute_kto_loss,
@@ -295,7 +295,7 @@ class DPOTrainer:
     Now with PROPER DPO loss implementation!
 
     Example:
-        >>> from unsloth_mlx import FastLanguageModel, DPOTrainer, DPOConfig
+        >>> from mlx_tune import FastLanguageModel, DPOTrainer, DPOConfig
         >>>
         >>> model, tokenizer = FastLanguageModel.from_pretrained(...)
         >>> model = FastLanguageModel.get_peft_model(model, r=16)

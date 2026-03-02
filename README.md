@@ -1,7 +1,6 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ARahim3/unsloth-mlx/main/unsloth_mlx_logo_f.png" alt="Unsloth-MLX Logo" width="200"/>
+  <img src="https://raw.githubusercontent.com/ARahim3/mlx-tune/main/mlx-tune-logo.png" alt="MLX-Tune Logo" width="300"/>
 </p>
-<h1 align="center">Unsloth-MLX</h1>
 
 <p align="center">
   <strong>Fine-tune LLMs on your Mac with Apple Silicon</strong><br>
@@ -9,9 +8,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ARahim3/unsloth-mlx"><img src="https://img.shields.io/github/stars/arahim3/unsloth-mlx?style=social" alt="GitHub stars"></a>
-  <a href="https://pepy.tech/projects/unsloth-mlx"><img src="https://static.pepy.tech/personalized-badge/unsloth-mlx?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=GREEN&left_text=downloads" alt="PyPI Downloads"></a>
-  <a href="https://github.com/ARahim3/unsloth-mlx"><img alt="GitHub forks" src="https://img.shields.io/github/forks/arahim3/unsloth-mlx"></a>
+  <a href="https://github.com/ARahim3/mlx-tune"><img src="https://img.shields.io/github/stars/arahim3/mlx-tune?style=social" alt="GitHub stars"></a>
+  <a href="https://pepy.tech/projects/mlx-tune"><img src="https://static.pepy.tech/personalized-badge/mlx-tune?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=GREEN&left_text=downloads" alt="PyPI Downloads"></a>
+  <a href="https://github.com/ARahim3/mlx-tune"><img alt="GitHub forks" src="https://img.shields.io/github/forks/arahim3/mlx-tune"></a>
   <br>
   <a href="#installation"><img src="https://img.shields.io/badge/Platform-Apple%20Silicon-black?logo=apple" alt="Platform"></a>
   <a href="#requirements"><img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white" alt="Python"></a>
@@ -29,17 +28,20 @@
 ---
 
 > [!NOTE]
+> **Name Change**: This project was originally called `unsloth-mlx`. Since it's not an official Unsloth project and to avoid any confusion, it has been renamed to `mlx-tune`. The vision remains the same — bringing the Unsloth experience to Mac users via MLX. If you were using `unsloth-mlx`, simply switch to `pip install mlx-tune` and update your imports from `unsloth_mlx` to `mlx_tune`.
+
+> [!NOTE]
 > **Why I Built This (A Personal Note)**
 >
 > I rely on Unsloth for my daily fine-tuning on cloud GPUs—it's the gold standard for me. But recently, I started working on a MacBook M4 and hit a friction point: I wanted to prototype locally on my Mac, then scale up to the cloud without rewriting my entire training script.
 >
-> Since Unsloth relies on Triton (which Macs don't have, yet), I couldn't use it locally. I built `unsloth-mlx` to solve this specific "Context Switch" problem. It wraps Apple's native MLX framework in an Unsloth-compatible API.
+> Since Unsloth relies on Triton (which Macs don't have, yet), I couldn't use it locally. I built `mlx-tune` to solve this specific "Context Switch" problem. It wraps Apple's native MLX framework in an Unsloth-compatible API.
 >
 > **The goal isn't to replace Unsloth or claim superior performance.** The goal is **code portability**: allowing you to write `FastLanguageModel` code once on your Mac, test it, and then push that *exact same script* to a CUDA cluster. It solves a workflow problem, not just a hardware one.
 >
 > This is an "unofficial" project built by a fan, for fans who happen to use Macs. It's helping me personally, and if it helps others like me, then I'll have my satisfaction.
 
-## Why Unsloth-MLX?
+## Why MLX-Tune?
 
 Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac users via Apple's [MLX](https://github.com/ml-explore/mlx) framework.
 
@@ -49,9 +51,9 @@ Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac u
 - 📦 **Export anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
 
 ```python
-# Unsloth (CUDA)                        # Unsloth-MLX (Apple Silicon)
-from unsloth import FastLanguageModel   from unsloth_mlx import FastLanguageModel
-from trl import SFTTrainer              from unsloth_mlx import SFTTrainer
+# Unsloth (CUDA)                        # MLX-Tune (Apple Silicon)
+from unsloth import FastLanguageModel   from mlx_tune import FastLanguageModel
+from trl import SFTTrainer              from mlx_tune import SFTTrainer
 
 # Rest of your code stays exactly the same!
 ```
@@ -66,7 +68,7 @@ from trl import SFTTrainer              from unsloth_mlx import SFTTrainer
 - 🔄 **Then scale up** - Move to cloud NVIDIA GPUs + original Unsloth for production training
 
 ```
-Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
+Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
    Prototype & experiment          Full-scale training
    Small datasets                  Large datasets
    Quick iterations                Production runs
@@ -74,7 +76,7 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.3.5** - Merged model save + load_adapter fixed!
+> 🚀 **v0.4.0** - Renamed to MLX-Tune + all previous features!
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -91,27 +93,27 @@ Local Mac (Unsloth-MLX)     →     Cloud GPU (Unsloth)
 | **Column Mapping** | ✅ **NEW** | `apply_column_mapping()` auto-rename |
 | **Dataset Config** | ✅ **NEW** | `HFDatasetConfig` structured loading |
 | Vision Models | ⚠️ Beta | Via mlx-vlm |
-| PyPI Package | ✅ Available | `uv pip install unsloth-mlx` |
+| PyPI Package | ✅ Available | `uv pip install mlx-tune` |
 
 ## Installation
 
 ```bash
 # Using uv (recommended - faster and more reliable)
-uv pip install unsloth-mlx
+uv pip install mlx-tune
 
 # Or using pip
-pip install unsloth-mlx
+pip install mlx-tune
 
 # From source (for development)
-git clone https://github.com/ARahim3/unsloth-mlx.git
-cd unsloth-mlx
+git clone https://github.com/ARahim3/mlx-tune.git
+cd mlx-tune
 uv pip install -e .
 ```
 
 ## Quick Start
 
 ```python
-from unsloth_mlx import FastLanguageModel, SFTTrainer, SFTConfig
+from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
 from datasets import load_dataset
 
 # Load any HuggingFace model (1B model for quick start)
@@ -159,7 +161,7 @@ model.save_pretrained_gguf("model", tokenizer)  # GGUF (see note below)
 ### Chat Templates & Response-Only Training
 
 ```python
-from unsloth_mlx import get_chat_template, train_on_responses_only
+from mlx_tune import get_chat_template, train_on_responses_only
 
 # Apply chat template (supports llama-3, gemma, qwen, phi, mistral, etc.)
 tokenizer = get_chat_template(tokenizer, chat_template="llama-3")
@@ -203,8 +205,8 @@ Check [`examples/`](examples/) for working code:
 
 ## Comparison with Unsloth
 
-| Feature | Unsloth (CUDA) | Unsloth-MLX |
-|---------|----------------|-------------|
+| Feature | Unsloth (CUDA) | MLX-Tune |
+|---------|----------------|----------|
 | Platform | NVIDIA GPUs | Apple Silicon |
 | Backend | Triton Kernels | MLX Framework |
 | Memory | VRAM (limited) | Unified (up to 512GB) |
@@ -215,7 +217,7 @@ Check [`examples/`](examples/) for working code:
 
 ### GGUF Export from Quantized Models
 
-**The Issue**: GGUF export (`save_pretrained_gguf`) doesn't work directly with quantized (4-bit) base models. This is a [known limitation in mlx-lm](https://github.com/ml-explore/mlx-lm/issues/353), not unsloth-mlx.
+**The Issue**: GGUF export (`save_pretrained_gguf`) doesn't work directly with quantized (4-bit) base models. This is a [known limitation in mlx-lm](https://github.com/ml-explore/mlx-lm/issues/353), not an mlx-tune bug.
 
 **What Works**:
 - ✅ Training with quantized models (QLoRA) - works perfectly
