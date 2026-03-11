@@ -13,7 +13,7 @@ Supported Training Methods:
 - VLM (Vision Language Model) fine-tuning
 """
 
-__version__ = "0.4.1"  # Full VLM fine-tuning support
+__version__ = "0.4.2"  # VLM training fixes: response-only loss, gradient accumulation, inference
 
 from mlx_tune.model import FastLanguageModel
 from mlx_tune.trainer import (

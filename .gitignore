@@ -69,8 +69,10 @@ htmlcov/
 # Training Outputs (generated during examples/tests)
 # =============================================================================
 outputs/
+output/
 adapters/
 fused_model/
+qwen_lora/
 *_output/
 *_outputs/
 *_adapters/
@@ -87,4 +89,5 @@ valid.jsonl
 *.log
 *.tmp
 .env
+.ropeproject
 .env.local
