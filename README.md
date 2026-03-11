@@ -76,7 +76,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.1** - Full Vision Model fine-tuning support!
+> 🚀 **v0.4.2** - Full Vision Model fine-tuning support!
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -210,9 +210,7 @@ trainer = VLMSFTTrainer(
 trainer.train()
 ```
 
-Requires `mlx-vlm`: `uv pip install mlx-tune[vlm]`
-
-See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for the full workflow.
+See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for the full workflow, or [`examples/11_qwen35_text_finetuning.py`](examples/11_qwen35_text_finetuning.py) for text-only fine-tuning on Qwen3.5.
 
 ## Supported Training Methods
 

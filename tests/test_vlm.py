@@ -237,7 +237,7 @@ class TestVLMSFTTrainer:
     def test_init_defaults(self):
         trainer = self._make_trainer()
         assert trainer.learning_rate == 2e-4
-        assert trainer.batch_size == 2
+        assert trainer.batch_size == 1  # VLM forces batch_size=1
         assert trainer.gradient_accumulation_steps == 4
 
     def test_extracts_actual_model(self):
@@ -409,7 +409,7 @@ class TestUnslothAPICompatibility:
             )
         assert trainer.learning_rate == 2e-4
         assert trainer.max_steps == 30
-        assert trainer.batch_size == 2
+        assert trainer.batch_size == 1  # VLM forces batch_size=1
 
 
 # ============================================================================

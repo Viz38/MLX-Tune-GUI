@@ -123,6 +123,7 @@ try:
         image=image,
         max_tokens=128,
         temperature=1.5,
+        min_p=0.1,
     )
     print(f"Response: {response}")
 except Exception as e:
@@ -143,11 +144,11 @@ trainer = VLMSFTTrainer(
     data_collator=UnslothVisionDataCollator(model, processor),
     train_dataset=converted_dataset,
     args=VLMSFTConfig(
-        per_device_train_batch_size=2,
+        per_device_train_batch_size=1,  # batch_size=1 recommended for VLM (images vary in size)
         gradient_accumulation_steps=4,
         warmup_steps=5,
-        max_steps=30,
-        learning_rate=2e-4,
+        max_steps=30,           # Increase to 500+ for real training
+        learning_rate=2e-4,     # Use 5e-5 for longer runs
         logging_steps=1,
         optim="adam",
         weight_decay=0.001,
@@ -170,6 +171,9 @@ print(f"\nTraining metrics: {trainer_stats.metrics}")
 # ===========================================================================
 print("\n" + "=" * 70)
 print("Step 6: Post-Training Inference Test")
+print("NOTE: With only 30 steps, output quality may degrade (not enough")
+print("training to learn the task, but enough to disrupt existing weights).")
+print("For real results, train for 500+ steps with lr=5e-5.")
 print("=" * 70)
 
 FastVisionModel.for_inference(model)
@@ -186,6 +190,7 @@ try:
         image=image,
         max_tokens=128,
         temperature=1.5,
+        min_p=0.1,
     )
     print(f"Response: {response}")
 except Exception as e:
