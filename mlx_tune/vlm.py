@@ -294,6 +294,7 @@ class VLMModelWrapper:
         image_path: Optional[str] = None,
         max_tokens: int = 256,
         temperature: float = 0.0,
+        min_p: float = 0.0,
         verbose: bool = False,
         **kwargs,
     ) -> str:
@@ -302,36 +303,98 @@ class VLMModelWrapper:
 
         Args:
             prompt: Text prompt
-            image: Image path(s) or PIL Image
+            image: Image path(s), PIL Image, or list of images
             image_path: Alternative path to image file
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
+            min_p: Minimum probability threshold for sampling (recommended: 0.1)
             verbose: Print generation details
 
         Returns:
             Generated text response
         """
         _require_mlx_vlm()
+        import tempfile
+        import os
+        import re
+        from PIL import Image as PILImage
 
         # Handle image_path as alias
         if image_path and image is None:
             image = image_path
 
-        result = vlm_generate(
-            self.model,
-            self.processor,
-            prompt=prompt,
-            image=image,
-            verbose=verbose,
-            max_tokens=max_tokens,
-            temp=temperature,
-            **kwargs,
-        )
+        gen_kwargs = dict(max_tokens=max_tokens, temp=temperature, **kwargs)
+        if min_p > 0:
+            gen_kwargs["min_p"] = min_p
 
-        # GenerationResult has .text attribute
-        if hasattr(result, "text"):
-            return result.text
-        return str(result)
+        # If image is provided, we need to format prompt with vision tokens
+        # and pre-compute inputs (mlx-vlm's generate doesn't do this for all models)
+        if image is not None:
+            # Build messages with image marker for chat template
+            messages = [
+                {"role": "user", "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": prompt or "Describe this image."},
+                ]},
+            ]
+            formatted_prompt = self.processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+            )
+
+            # Convert PIL images to temp file paths (mlx-vlm expects file paths)
+            temp_files = []
+            image_paths = []
+            images_list = image if isinstance(image, list) else [image]
+            for img in images_list:
+                if isinstance(img, PILImage.Image):
+                    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+                    img.save(tmp.name)
+                    image_paths.append(tmp.name)
+                    temp_files.append(tmp.name)
+                else:
+                    image_paths.append(img)
+
+            try:
+                config = self.model.config.__dict__ if hasattr(self.model.config, "__dict__") else self.model.config
+                image_token_index = config.get("image_token_index", config.get("image_token_id"))
+
+                inputs = prepare_inputs(
+                    processor=self.processor,
+                    images=image_paths,
+                    prompts=formatted_prompt,
+                    image_token_index=image_token_index,
+                )
+
+                # Generate using pre-computed inputs
+                extra = {k: v for k, v in inputs.items()
+                         if k not in ("input_ids", "pixel_values", "attention_mask")}
+
+                text = ""
+                for response in vlm_stream_generate(
+                    self.model, self.processor, prompt=formatted_prompt,
+                    input_ids=inputs["input_ids"],
+                    pixel_values=inputs["pixel_values"],
+                    mask=inputs.get("attention_mask"),
+                    **extra, **gen_kwargs,
+                ):
+                    text += response.text
+            finally:
+                for f in temp_files:
+                    os.unlink(f)
+        else:
+            # Text-only generation
+            result = vlm_generate(
+                self.model, self.processor,
+                prompt=prompt, verbose=verbose,
+                **gen_kwargs,
+            )
+            text = result.text if hasattr(result, "text") else str(result)
+
+        # Strip thinking tags from output (Qwen3.5 inserts <think>...</think>)
+        text = re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL)
+        text = re.sub(r"</think>\s*", "", text)
+        text = re.sub(r"<think>\s*", "", text)
+        return text.strip()
 
     def stream_generate(self, prompt: str, image: Optional[Any] = None, **kwargs):
         """Stream-generate response for image+text input."""
@@ -570,7 +633,21 @@ class UnslothVisionDataCollator:
                     if k not in extra_kwargs:
                         extra_kwargs[k] = v
 
-        # Stack into batch
+        # Pad sequences to same length and stack into batch
+        if len(all_input_ids) > 1:
+            max_len = max(ids.shape[-1] for ids in all_input_ids)
+            padded_ids = []
+            padded_masks = []
+            for ids, mask in zip(all_input_ids, all_masks):
+                pad_len = max_len - ids.shape[-1]
+                if pad_len > 0:
+                    ids = mx.concatenate([ids, mx.zeros((1, pad_len), dtype=ids.dtype)], axis=1)
+                    mask = mx.concatenate([mask, mx.zeros((1, pad_len), dtype=mask.dtype)], axis=1)
+                padded_ids.append(ids)
+                padded_masks.append(mask)
+            all_input_ids = padded_ids
+            all_masks = padded_masks
+
         batch = {
             "input_ids": mx.concatenate(all_input_ids, axis=0) if all_input_ids else None,
             "attention_mask": mx.concatenate(all_masks, axis=0) if all_masks else None,
@@ -648,6 +725,14 @@ class VLMSFTTrainer:
             self.max_steps = getattr(args, "max_steps", None)
             self.num_train_epochs = getattr(args, "num_train_epochs", 1)
             self.batch_size = getattr(args, "per_device_train_batch_size", 1)
+            if self.batch_size > 1:
+                warnings.warn(
+                    f"VLM training with batch_size={self.batch_size} is not recommended. "
+                    "Images of different sizes produce different vision token counts, "
+                    "which causes shape mismatches. Using batch_size=1 instead.",
+                    UserWarning,
+                )
+                self.batch_size = 1
             self.gradient_accumulation_steps = getattr(args, "gradient_accumulation_steps", 1)
             self.warmup_steps = getattr(args, "warmup_steps", 0)
             self.logging_steps = getattr(args, "logging_steps", 10)
@@ -696,11 +781,23 @@ class VLMSFTTrainer:
         # Set up optimizer
         optimizer = optim.Adam(learning_rate=self.learning_rate)
 
+        # Auto-detect assistant token ID for response-only training
+        assistant_id = 77091  # default fallback
+        if self.processor is not None:
+            tokenizer = getattr(self.processor, "tokenizer", self.processor)
+            if hasattr(tokenizer, "encode"):
+                ids = tokenizer.encode("assistant", add_special_tokens=False)
+                if ids:
+                    assistant_id = ids[0]
+
         # Set up the mlx-vlm Trainer
+        # train_on_completions=True trains only on assistant response tokens
+        # (matches Unsloth/TRL SFTTrainer behavior)
         trainer = VLMTrainerInternal(
             self.actual_model,
             optimizer,
-            train_on_completions=self.train_on_completions,
+            train_on_completions=True,
+            assistant_id=assistant_id,
         )
 
         # Determine total steps
@@ -733,12 +830,22 @@ class VLMSFTTrainer:
     def _train_with_collator(self, trainer, total_steps):
         """Train using our UnslothVisionDataCollator."""
         import mlx.core as mx
+        import mlx.nn as nn
+        from mlx.utils import tree_map
         from tqdm import tqdm
 
+        grad_accum = self.gradient_accumulation_steps
         progress = tqdm(range(total_steps), desc="Training")
         total_loss = 0.0
         step = 0
         epoch = 0
+        micro_step = 0
+        accum_loss = 0.0
+
+        # For gradient accumulation, we compute loss+grad manually
+        loss_and_grad_fn = nn.value_and_grad(trainer.model, trainer.loss_fn)
+
+        accumulated_grads = None
 
         while step < total_steps:
             epoch += 1
@@ -749,19 +856,41 @@ class VLMSFTTrainer:
                 batch_samples = self.train_dataset[i : i + self.batch_size]
                 batch = self.data_collator(batch_samples)
 
-                loss = trainer.train_step(batch)
-                mx.eval(trainer.model, trainer.optimizer.state)
+                loss, grads = loss_and_grad_fn(trainer.model, batch)
+                mx.eval(loss)
 
-                loss_val = loss.item()
-                total_loss += loss_val
-                step += 1
-
-                progress.update(1)
-                if step % self.logging_steps == 0:
-                    avg_loss = total_loss / step
-                    progress.set_postfix(
-                        {"loss": f"{loss_val:.4f}", "avg_loss": f"{avg_loss:.4f}"}
+                # Accumulate gradients
+                if accumulated_grads is None:
+                    accumulated_grads = grads
+                else:
+                    accumulated_grads = tree_map(
+                        lambda a, g: a + g, accumulated_grads, grads
                     )
+                accum_loss += loss.item()
+                micro_step += 1
+
+                # Update weights every grad_accum micro-steps
+                if micro_step >= grad_accum:
+                    # Average gradients
+                    averaged_grads = tree_map(
+                        lambda g: g / grad_accum, accumulated_grads
+                    )
+                    trainer.optimizer.update(trainer.model, averaged_grads)
+                    mx.eval(trainer.model, trainer.optimizer.state)
+
+                    loss_val = accum_loss / grad_accum
+                    total_loss += loss_val
+                    step += 1
+                    micro_step = 0
+                    accum_loss = 0.0
+                    accumulated_grads = None
+
+                    progress.update(1)
+                    if step % self.logging_steps == 0:
+                        avg_loss = total_loss / step
+                        progress.set_postfix(
+                            {"loss": f"{loss_val:.4f}", "avg_loss": f"{avg_loss:.4f}"}
+                        )
 
         progress.close()
 
