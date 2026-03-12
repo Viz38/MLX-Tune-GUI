@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="https://arahim3.github.io/mlx-tune/">Documentation</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#supported-training-methods">Training Methods</a>
 </p>
