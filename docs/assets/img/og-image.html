@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MLX-Tune — OG Image</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 1200px;
+      height: 630px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Subtle grid background */
+    body::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    /* Corner accent */
+    .corner-accent {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 5px;
+      background: #0066cc;
+    }
+
+    .content {
+      text-align: center;
+      z-index: 1;
+      position: relative;
+    }
+
+    .logo {
+      margin-bottom: 32px;
+    }
+    .logo img {
+      height: 88px;
+      width: auto;
+    }
+
+    h1 {
+      font-size: 34px;
+      font-weight: 700;
+      color: #1a1a1a;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .subtitle {
+      font-size: 20px;
+      color: #888888;
+      margin-bottom: 36px;
+    }
+
+    .install-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f6f8fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 17px;
+      color: #1a1a1a;
+      margin-bottom: 20px;
+    }
+    .install-pill .dollar {
+      color: #888888;
+    }
+
+    .badges {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+    }
+    .badge {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 5px 14px;
+      border-radius: 20px;
+      background: #f0f2f5;
+      color: #666;
+      border: 1px solid #e8e8e8;
+    }
+    .badge.accent {
+      background: #e8f1fd;
+      color: #0066cc;
+      border-color: #d0e3f9;
+    }
+  </style>
+</head>
+<body>
+  <div class="corner-accent"></div>
+
+  <div class="content">
+    <div class="logo">
+      <img src="logo.png" alt="mlx-tune" />
+    </div>
+    <h1>Fine-tune LLMs on Apple Silicon</h1>
+    <p class="subtitle">Same API as Unsloth · Powered by MLX · M1–M5 Native</p>
+    <div class="install-pill">
+      <span class="dollar">$</span> pip install mlx-tune
+    </div>
+    <div class="badges">
+      <span class="badge accent">v0.4.2</span>
+      <span class="badge">Apple Silicon</span>
+      <span class="badge">SFT · DPO · GRPO · VLM</span>
+      <span class="badge">Apache 2.0</span>
+    </div>
+  </div>
+</body>
+</html>
