@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Fine-tune LLMs on your Mac with Apple Silicon</strong><br>
-  <em>Prototype locally, scale to cloud. Same code, just change the import.</em>
+  <em>SFT, DPO, GRPO, and Vision fine-tuning — natively on MLX. Unsloth-compatible API.</em>
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@ Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac u
 
 - 🚀 **Fine-tune LLMs locally** on your Mac (M1/M2/M3/M4/M5)
 - 💾 **Leverage unified memory** (up to 512GB on Mac Studio)
-- 🔄 **Same API as Unsloth** - your existing code just works!
+- 🔄 **Unsloth-compatible API** - your existing training scripts just work!
 - 📦 **Export anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
 
 ```python
