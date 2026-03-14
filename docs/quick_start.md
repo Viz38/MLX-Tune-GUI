@@ -8,7 +8,7 @@ Get started with MLX-Tune in under 5 minutes!
 - Apple Silicon Mac (M1, M2, M3, M4, or M5)
 - macOS 13.0+
 - Python 3.9+
-- 16GB+ RAM (32GB+ recommended for larger models)
+- 8GB+ RAM (16GB+ recommended)
 
 ### Install MLX-Tune
 
