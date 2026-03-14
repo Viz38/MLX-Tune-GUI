@@ -236,7 +236,7 @@ Check [`examples/`](examples/) for working code:
 
 - **Hardware**: Apple Silicon Mac (M1/M2/M3/M4/M5)
 - **OS**: macOS 13.0+
-- **Memory**: 16GB+ unified RAM (32GB+ for 7B+ models)
+- **Memory**: 8GB+ unified RAM (16GB+ recommended)
 - **Python**: 3.9+
 
 ## Comparison with Unsloth
