@@ -395,10 +395,19 @@ class VLMModelWrapper:
                 for f in temp_files:
                     os.unlink(f)
         else:
-            # Text-only generation
+            # Text-only generation — apply chat template so the model
+            # sees proper <|im_start|>user/assistant tokens
+            messages = [
+                {"role": "user", "content": [
+                    {"type": "text", "text": prompt or ""},
+                ]},
+            ]
+            formatted_prompt = self.processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+            )
             result = vlm_generate(
                 self.model, self.processor,
-                prompt=prompt, verbose=verbose,
+                prompt=formatted_prompt, verbose=verbose,
                 **gen_kwargs,
             )
             text = result.text if hasattr(result, "text") else str(result)
@@ -724,7 +733,10 @@ class _VLMTrainerShim:
                 fwd_kwargs[k] = v
 
         logits = model(**fwd_kwargs)
-        if isinstance(logits, tuple):
+        # mlx-vlm 0.4.0+ returns LanguageModelOutput dataclass
+        if hasattr(logits, "logits"):
+            logits = logits.logits
+        elif isinstance(logits, tuple):
             logits = logits[0]
 
         # Shift for next-token prediction

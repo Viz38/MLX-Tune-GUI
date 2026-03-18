@@ -73,7 +73,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.2** - Full Vision Model fine-tuning support!
+> 🚀 **v0.4.4** - Fix mlx-vlm 0.4.0 compatibility + text-only VLM inference
 
 | Feature | Status | Notes |
 |---------|--------|-------|

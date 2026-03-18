@@ -79,41 +79,35 @@ dataset = [
         {"role": "user", "content": [{"type": "text", "text": "What is an API?"}]},
         {"role": "assistant", "content": [{"type": "text", "text": "An API (Application Programming Interface) is a set of rules and protocols that allows different software applications to communicate with each other."}]},
     ]},
+    {"messages": [
+        {"role": "user", "content": [{"type": "text", "text": "What is the capital of Japan?"}]},
+        {"role": "assistant", "content": [{"type": "text", "text": "The capital of Japan is Tokyo."}]},
+    ]},
+    {"messages": [
+        {"role": "user", "content": [{"type": "text", "text": "What is a neural network?"}]},
+        {"role": "assistant", "content": [{"type": "text", "text": "A neural network is a computing system inspired by the brain, consisting of interconnected nodes (neurons) organized in layers that process information and learn patterns from data."}]},
+    ]},
+    {"messages": [
+        {"role": "user", "content": [{"type": "text", "text": "What is the speed of light?"}]},
+        {"role": "assistant", "content": [{"type": "text", "text": "The speed of light in a vacuum is approximately 299,792,458 meters per second, or about 186,000 miles per second."}]},
+    ]},
+    {"messages": [
+        {"role": "user", "content": [{"type": "text", "text": "What is Docker?"}]},
+        {"role": "assistant", "content": [{"type": "text", "text": "Docker is a platform that packages applications and their dependencies into lightweight, portable containers that run consistently across different environments."}]},
+    ]},
+    {"messages": [
+        {"role": "user", "content": [{"type": "text", "text": "Who wrote Romeo and Juliet?"}]},
+        {"role": "assistant", "content": [{"type": "text", "text": "Romeo and Juliet was written by William Shakespeare, first published in 1597."}]},
+    ]},
 ]
 
 print(f"Dataset: {len(dataset)} text-only samples (no images)")
 
 # ===========================================================================
-# Step 4: Train
+# Step 4: Test inference BEFORE training
 # ===========================================================================
 print("\n" + "=" * 70)
-print("Step 4: Training (text-only)")
-print("=" * 70)
-
-FastVisionModel.for_training(model)
-
-trainer = VLMSFTTrainer(
-    model=model,
-    tokenizer=processor,
-    data_collator=UnslothVisionDataCollator(model, processor),
-    train_dataset=dataset,
-    args=VLMSFTConfig(
-        per_device_train_batch_size=1,
-        max_steps=10,
-        learning_rate=2e-4,
-        logging_steps=1,
-        output_dir="outputs_text",
-    ),
-)
-
-trainer_stats = trainer.train()
-print(f"\nTraining metrics: {trainer_stats.metrics}")
-
-# ===========================================================================
-# Step 5: Inference
-# ===========================================================================
-print("\n" + "=" * 70)
-print("Step 5: Inference (after training)")
+print("Step 4: Pre-Training Inference Test")
 print("=" * 70)
 
 FastVisionModel.for_inference(model)
@@ -130,10 +124,59 @@ for q in questions:
     print(f"A: {response}")
 
 # ===========================================================================
-# Step 6: Save
+# Step 5: Train
 # ===========================================================================
 print("\n" + "=" * 70)
-print("Step 6: Saving Adapters")
+print("Step 5: Training (text-only)")
+print("=" * 70)
+
+FastVisionModel.for_training(model)
+
+trainer = VLMSFTTrainer(
+    model=model,
+    tokenizer=processor,
+    data_collator=UnslothVisionDataCollator(model, processor),
+    train_dataset=dataset,
+    args=VLMSFTConfig(
+        per_device_train_batch_size=1,
+        max_steps=20,
+        learning_rate=1e-4,
+        logging_steps=1,
+        output_dir="outputs_text",
+    ),
+)
+
+trainer_stats = trainer.train()
+print(f"\nTraining metrics: {trainer_stats.metrics}")
+
+# ===========================================================================
+# Step 6: Test inference AFTER training
+# ===========================================================================
+print("\n" + "=" * 70)
+print("Step 6: Post-Training Inference Test")
+print("NOTE: With only 20 steps on 10 samples, the model overfits to the")
+print("training data. Answers will be short and match the training format.")
+print("For real results, use a larger dataset and more training steps.")
+print("=" * 70)
+
+FastVisionModel.for_inference(model)
+
+questions = [
+    "What is machine learning?",
+    "What is Python?",
+    "What is the capital of Japan?",
+]
+
+for q in questions:
+    response = model.generate(prompt=q, max_tokens=64, temperature=0.0)
+    print(f"\nQ: {q}")
+    print(f"A: {response}")
+
+# ===========================================================================
+# Step 7: Save
+# ===========================================================================
+print("\n" + "=" * 70)
+print("Step 7: Saving Adapters")
 print("=" * 70)
 
 model.save_pretrained("qwen35_text_lora")
