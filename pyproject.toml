@@ -61,7 +61,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/ARahim3/mlx-tune"
-Documentation = "https://github.com/ARahim3/mlx-tune#readme"
+Documentation = "https://arahim3.github.io/mlx-tune/"
 Repository = "https://github.com/ARahim3/mlx-tune"
 Issues = "https://github.com/ARahim3/mlx-tune/issues"
 
