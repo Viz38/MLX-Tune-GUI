@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Fine-tune LLMs on your Mac with Apple Silicon</strong><br>
-  <em>SFT, DPO, GRPO, and Vision fine-tuning — natively on MLX. Unsloth-compatible API.</em>
+  <strong>Fine-tune LLMs, Vision, and Audio models on your Mac</strong><br>
+  <em>SFT, DPO, GRPO, Vision, TTS, and STT fine-tuning — natively on MLX. Unsloth-compatible API.</em>
 </p>
 
 <p align="center">
@@ -46,10 +46,11 @@
 
 Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac users via Apple's [MLX](https://github.com/ml-explore/mlx) framework.
 
-- 🚀 **Fine-tune LLMs locally** on your Mac (M1/M2/M3/M4/M5)
+- 🚀 **Fine-tune LLMs, VLMs, TTS & STT** locally on your Mac (M1/M2/M3/M4/M5)
 - 💾 **Leverage unified memory** (up to 512GB on Mac Studio)
 - 🔄 **Unsloth-compatible API** - your existing training scripts just work!
 - 📦 **Export anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
+- 🎙️ **Audio fine-tuning** - Orpheus TTS (SNAC codec) + Whisper STT
 
 ```python
 # Unsloth (CUDA)                        # MLX-Tune (Apple Silicon)
@@ -77,7 +78,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.6** - Fix VLM save/load/export + mlx-vlm 0.4.0 compatibility
+> 🚀 **v0.4.7** - Audio fine-tuning (TTS + STT), post-training workflow, track-based docs
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -93,7 +94,11 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 | Multi-turn Merging | ✅ Stable | `to_sharegpt()` + `conversation_extension` |
 | Column Mapping | ✅ Stable | `apply_column_mapping()` auto-rename |
 | Dataset Config | ✅ Stable | `HFDatasetConfig` structured loading |
-| **Vision Models** | ✅ **NEW** | **Full VLM fine-tuning** via mlx-vlm |
+| Vision Models | ✅ Stable | Full VLM fine-tuning via mlx-vlm |
+| **TTS Fine-Tuning** | ✅ **NEW** | **Orpheus-3B via SNAC audio codec** |
+| **STT Fine-Tuning** | ✅ **NEW** | **Whisper with encoder-decoder LoRA** |
+| **`convert()`** | ✅ **NEW** | **HF → MLX conversion (LLM, TTS, STT)** |
+| **`push_to_hub()`** | ✅ **NEW** | **Upload to HuggingFace Hub** |
 | PyPI Package | ✅ Available | `uv pip install mlx-tune` |
 
 ## Installation
@@ -101,6 +106,9 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 ```bash
 # Using uv (recommended - faster and more reliable)
 uv pip install mlx-tune
+
+# With audio support (TTS/STT fine-tuning)
+uv pip install 'mlx-tune[audio]'
 
 # Or using pip
 pip install mlx-tune
@@ -213,6 +221,82 @@ trainer.train()
 
 See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for the full workflow, or [`examples/11_qwen35_text_finetuning.py`](examples/11_qwen35_text_finetuning.py) for text-only fine-tuning on Qwen3.5.
 
+### TTS Fine-Tuning (NEW!)
+
+Fine-tune text-to-speech models like Orpheus-3B using the SNAC audio codec:
+
+```python
+from mlx_tune import FastTTSModel, TTSSFTTrainer, TTSSFTConfig, TTSDataCollator
+from datasets import load_dataset, Audio
+
+# Load TTS model + SNAC codec
+model, tokenizer = FastTTSModel.from_pretrained("mlx-community/orpheus-3b-0.1-ft-bf16")
+model = FastTTSModel.get_peft_model(model, r=16, lora_alpha=16)
+
+# Train on audio data
+dataset = load_dataset("MrDragonFox/Elise", split="train[:100]")
+dataset = dataset.cast_column("audio", Audio(sampling_rate=24000))
+
+trainer = TTSSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=TTSDataCollator(model, tokenizer),
+    train_dataset=dataset,
+    args=TTSSFTConfig(output_dir="./tts_output", max_steps=60),
+)
+trainer.train()
+
+# Generate speech
+FastTTSModel.for_inference(model)
+audio = model.generate("Hello, how are you?")
+```
+
+See [`examples/12_orpheus_tts_finetuning.py`](examples/12_orpheus_tts_finetuning.py) for the full workflow.
+
+### STT Fine-Tuning (NEW!)
+
+Fine-tune Whisper speech-to-text models with encoder-decoder LoRA:
+
+```python
+from mlx_tune import FastSTTModel, STTSFTTrainer, STTSFTConfig, STTDataCollator
+
+# Load Whisper model
+model, processor = FastSTTModel.from_pretrained("mlx-community/whisper-tiny-asr-fp16")
+model = FastSTTModel.get_peft_model(model, r=8, finetune_encoder=True, finetune_decoder=True)
+
+# Train on transcription data
+trainer = STTSFTTrainer(
+    model=model, tokenizer=processor,
+    data_collator=STTDataCollator(model, processor),
+    train_dataset=dataset,
+    args=STTSFTConfig(output_dir="./stt_output", max_steps=60),
+)
+trainer.train()
+
+# Transcribe audio
+FastSTTModel.for_inference(model)
+text = model.transcribe("audio.wav")
+```
+
+See [`examples/13_whisper_stt_finetuning.py`](examples/13_whisper_stt_finetuning.py) for the full workflow.
+
+### Post-Training Workflow
+
+All model types (LLM, VLM, TTS, STT) support the full post-training workflow:
+
+```python
+# Save LoRA adapters
+model.save_pretrained("./adapters")
+
+# Merge LoRA into base model
+model.save_pretrained_merged("./merged")
+
+# Convert HF model to MLX format
+FastLanguageModel.convert("model-name", mlx_path="./mlx_model")
+
+# Push to HuggingFace Hub
+model.push_to_hub("username/my-model")
+```
+
 ## Supported Training Methods
 
 | Method | Trainer | Implementation | Use Case |
@@ -224,13 +308,18 @@ See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetu
 | **KTO** | `KTOTrainer` | ✅ Native MLX | Kahneman-Tversky optimization |
 | **SimPO** | `SimPOTrainer` | ✅ Native MLX | Simple preference optimization |
 | **VLM SFT** | `VLMSFTTrainer` | ✅ Native MLX | Vision-Language model fine-tuning |
+| **TTS SFT** | `TTSSFTTrainer` | ✅ Native MLX | Text-to-Speech (Orpheus + SNAC codec) |
+| **STT SFT** | `STTSFTTrainer` | ✅ Native MLX | Speech-to-Text (Whisper encoder-decoder) |
 
 ## Examples
 
 Check [`examples/`](examples/) for working code:
-- Basic model loading and inference
-- Complete SFT fine-tuning pipeline
-- RL training methods (DPO, GRPO, ORPO)
+- Basic model loading and inference (01–07)
+- Complete SFT fine-tuning pipeline (08)
+- RL training methods — DPO, GRPO, ORPO (09)
+- Vision model fine-tuning — Qwen3.5 (10–11)
+- TTS fine-tuning — Orpheus-3B (12)
+- STT fine-tuning — Whisper (13)
 
 ## Requirements
 
@@ -293,10 +382,10 @@ Check [`examples/`](examples/) for working code:
 
 Contributions welcome! Areas that need help:
 - Custom MLX kernels for even faster training
-- More comprehensive test coverage
-- Documentation and examples
+- More comprehensive test coverage (currently 60%, target 70%+)
 - Testing on different M-series chips (M1, M2, M3, M4, M5)
-- VLM training improvements
+- Additional TTS/STT model support (Sesame, Spark-TTS, distil-whisper)
+- Batched RL training (currently single-sample)
 
 ## License
 
@@ -308,6 +397,7 @@ Apache 2.0 - See [LICENSE](LICENSE) file.
 - [MLX](https://github.com/ml-explore/mlx) - Apple's ML framework
 - [MLX-LM](https://github.com/ml-explore/mlx-lm) - LLM utilities for MLX
 - [MLX-VLM](https://github.com/Blaizzy/mlx-vlm) - Vision model support
+- [MLX-Audio](https://github.com/Blaizzy/mlx-audio) - Audio inference (TTS/STT) for MLX
 
 ---
 
