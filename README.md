@@ -8,7 +8,6 @@
 </p>
 
 <p align="center">
-  <a href="https://pepy.tech/projects/unsloth-mlx"><img src="https://static.pepy.tech/personalized-badge/unsloth-mlx?period=total&units=INTERNATIONAL_SYSTEM&left_color=GRAY&right_color=GREEN&left_text=downloads" alt="PyPI Downloads"></a>
   <br>
   <a href="#installation"><img src="https://img.shields.io/badge/Platform-Apple%20Silicon-black?logo=apple" alt="Platform"></a>
   <a href="#requirements"><img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white" alt="Python"></a>
