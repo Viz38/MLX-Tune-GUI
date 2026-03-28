@@ -1,5 +1,5 @@
 """
-Loss functions for MLX-Tune RL training.
+Loss functions for MLX-Tune training.
 
 Provides proper loss implementations for:
 - DPO (Direct Preference Optimization)
@@ -7,6 +7,9 @@ Provides proper loss implementations for:
 - GRPO (Group Relative Policy Optimization)
 - KTO (Kahneman-Tversky Optimization)
 - SimPO (Simple Preference Optimization)
+- InfoNCE / MultipleNegativesRankingLoss (Embedding fine-tuning)
+- Cosine Embedding Loss (Embedding fine-tuning)
+- Triplet Loss (Embedding fine-tuning)
 """
 
 from typing import Optional, Tuple, Callable, List, Any
@@ -576,3 +579,102 @@ def compute_reference_logprobs(
     ref_rejected = compute_log_probs_with_lengths(model, rejected_ids, rejected_lengths)
 
     return mx.stop_gradient(ref_chosen), mx.stop_gradient(ref_rejected)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Contrastive loss functions for embedding fine-tuning
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+def infonce_loss(
+    anchor_embeds: mx.array,
+    positive_embeds: mx.array,
+    temperature: float = 0.05,
+) -> mx.array:
+    """
+    InfoNCE / MultipleNegativesRankingLoss for embedding fine-tuning.
+
+    For each anchor, the corresponding positive is the true match.
+    All other positives in the batch serve as in-batch negatives.
+
+    Loss = -log(exp(sim(a_i, p_i)/tau) / sum_j(exp(sim(a_i, p_j)/tau)))
+
+    This is equivalent to cross-entropy over the similarity matrix where
+    the diagonal entries are the targets.
+
+    Args:
+        anchor_embeds: L2-normalized anchor embeddings [B, D].
+        positive_embeds: L2-normalized positive embeddings [B, D].
+        temperature: Temperature scaling (tau). Lower = sharper distribution.
+
+    Returns:
+        Scalar loss value.
+    """
+    # Similarity matrix: [B, B]
+    similarity = (anchor_embeds @ positive_embeds.T) / temperature
+
+    # Labels: diagonal (each anchor matches its own positive)
+    labels = mx.arange(similarity.shape[0])
+
+    # Cross-entropy loss
+    loss = nn.losses.cross_entropy(similarity, labels, reduction="mean")
+
+    return loss
+
+
+def cosine_embedding_loss(
+    anchor_embeds: mx.array,
+    positive_embeds: mx.array,
+    negative_embeds: Optional[mx.array] = None,
+    margin: float = 0.5,
+) -> mx.array:
+    """
+    Cosine embedding loss for embedding pairs.
+
+    For positive pairs: loss = 1 - cos_sim(a, p)
+    For negative pairs: loss = max(0, cos_sim(a, n) - margin)
+
+    Args:
+        anchor_embeds: L2-normalized anchor embeddings [B, D].
+        positive_embeds: L2-normalized positive embeddings [B, D].
+        negative_embeds: Optional L2-normalized negative embeddings [B, D].
+        margin: Margin for negative pairs.
+
+    Returns:
+        Scalar loss.
+    """
+    pos_sim = mx.sum(anchor_embeds * positive_embeds, axis=-1)  # [B]
+    pos_loss = mx.mean(1.0 - pos_sim)
+
+    if negative_embeds is not None:
+        neg_sim = mx.sum(anchor_embeds * negative_embeds, axis=-1)
+        neg_loss = mx.mean(mx.maximum(neg_sim - margin, 0.0))
+        return pos_loss + neg_loss
+
+    return pos_loss
+
+
+def triplet_loss(
+    anchor_embeds: mx.array,
+    positive_embeds: mx.array,
+    negative_embeds: mx.array,
+    margin: float = 1.0,
+) -> mx.array:
+    """
+    Triplet margin loss: max(0, d(a,p) - d(a,n) + margin).
+
+    Uses Euclidean distance. Requires explicit negative samples.
+
+    Args:
+        anchor_embeds: Anchor embeddings [B, D].
+        positive_embeds: Positive embeddings [B, D].
+        negative_embeds: Negative embeddings [B, D].
+        margin: Margin value.
+
+    Returns:
+        Scalar loss.
+    """
+    d_pos = mx.sqrt(mx.sum((anchor_embeds - positive_embeds) ** 2, axis=-1) + 1e-8)
+    d_neg = mx.sqrt(mx.sum((anchor_embeds - negative_embeds) ** 2, axis=-1) + 1e-8)
+    loss = mx.mean(mx.maximum(d_pos - d_neg + margin, 0.0))
+    return loss
