@@ -45,6 +45,7 @@
         <li class="sub-item"><a href="#VLMModelWrapper">VLMModelWrapper</a></li>
         <li><a href="#training">Training</a></li>
         <li class="sub-item"><a href="#VLMSFTTrainer">VLMSFTTrainer</a></li>
+        <li class="sub-item"><a href="#VLMGRPOTrainer">VLMGRPOTrainer</a></li>
         <li><a href="#post-training">Post-Training</a></li>
         <li><a href="#examples">Examples</a></li>
         <li><a href="#tips">Tips</a></li>
@@ -273,6 +274,87 @@ print(response)</code></pre>
             </tbody>
           </table>
         </div>
+
+        <div class="api-entry" id="VLMGRPOTrainer">
+          <h3>VLMGRPOTrainer</h3>
+          <div class="api-signature">
+            <span class="api-name">VLMGRPOTrainer</span>(<span class="api-param">model</span>, <span class="api-param">train_dataset</span>, <span class="api-param">processor</span>, <span class="api-param">reward_fn</span>, <span class="api-param">args</span><span class="api-default">=None</span>)
+          </div>
+          <p>Group Relative Policy Optimization (GRPO) trainer for vision-language models. Generates multiple completions per prompt, scores them with a reward function, and updates the policy using relative advantages within each group.</p>
+          <table class="api-params">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>model</code></td><td>VLMModelWrapper</td><td>Model with LoRA adapters from <code>FastVisionModel.get_peft_model()</code></td></tr>
+              <tr><td><code>train_dataset</code></td><td>list[dict]</td><td>List of dicts with <code>prompt</code> (str), <code>image</code> (PIL Image or file path), and <code>answer</code> (str) keys</td></tr>
+              <tr><td><code>processor</code></td><td>Processor</td><td>Processor from <code>FastVisionModel.from_pretrained()</code></td></tr>
+              <tr><td><code>reward_fn</code></td><td>Callable</td><td>Function <code>(response_text, ground_truth) &rarr; float</code> that scores each completion</td></tr>
+              <tr><td><code>args</code></td><td>VLMGRPOConfig</td><td>Training configuration</td></tr>
+            </tbody>
+          </table>
+          <div class="api-signature" style="margin-top:12px;"><span class="api-name">trainer.train</span>() &mdash; Start GRPO training. Returns training statistics.</div>
+
+          <div class="callout" style="margin-top: 16px;">
+            <div class="callout-title">How GRPO works</div>
+            <p>For each sample, GRPO generates <code>num_generations</code> completions, scores them with your <code>reward_fn</code>, computes advantages relative to the group mean, and updates the model to favor higher-reward responses. A KL penalty (controlled by <code>beta</code>) prevents the policy from diverging too far from the reference.</p>
+          </div>
+        </div>
+
+        <div class="api-entry">
+          <h3>VLMGRPOConfig</h3>
+          <div class="api-signature">
+            <span class="api-name">VLMGRPOConfig</span>(<span class="api-param">beta</span><span class="api-default">=0.04</span>, <span class="api-param">num_generations</span><span class="api-default">=2</span>, <span class="api-param">temperature</span><span class="api-default">=0.7</span>, <span class="api-param">max_completion_length</span><span class="api-default">=128</span>, <span class="api-param">output_dir</span><span class="api-default">="./vlm_grpo_outputs"</span>, <span class="api-param">learning_rate</span><span class="api-default">=1e-6</span>, <span class="api-param">max_steps</span><span class="api-default">=-1</span>, <span class="api-param">logging_steps</span><span class="api-default">=1</span>, <span class="api-param">save_steps</span><span class="api-default">=100</span>)
+          </div>
+          <p>Configuration for VLM GRPO training.</p>
+          <table class="api-params">
+            <thead><tr><th>Parameter</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>beta</code></td><td><code>0.04</code></td><td>KL penalty coefficient. Higher values keep the model closer to the reference policy</td></tr>
+              <tr><td><code>num_generations</code></td><td><code>2</code></td><td>Number of completions generated per prompt for advantage estimation</td></tr>
+              <tr><td><code>temperature</code></td><td><code>0.7</code></td><td>Sampling temperature for generation (higher = more diverse completions)</td></tr>
+              <tr><td><code>max_completion_length</code></td><td><code>128</code></td><td>Maximum tokens per generated completion</td></tr>
+              <tr><td><code>output_dir</code></td><td><code>"./vlm_grpo_outputs"</code></td><td>Directory for checkpoints and logs</td></tr>
+              <tr><td><code>learning_rate</code></td><td><code>1e-6</code></td><td>Learning rate (typically lower than SFT)</td></tr>
+              <tr><td><code>max_steps</code></td><td><code>-1</code></td><td>Maximum training steps. <code>-1</code> trains for one full epoch</td></tr>
+              <tr><td><code>logging_steps</code></td><td><code>1</code></td><td>Log training metrics every N steps</td></tr>
+              <tr><td><code>save_steps</code></td><td><code>100</code></td><td>Save checkpoint every N steps</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="api-entry">
+          <h4>GRPO usage example</h4>
+          <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastVisionModel
+from mlx_tune.vlm import VLMGRPOTrainer, VLMGRPOConfig
+
+# Load and configure model
+model, processor = FastVisionModel.from_pretrained(
+    "mlx-community/Qwen3.5-0.8B-bf16",
+)
+model = FastVisionModel.get_peft_model(model, r=16, lora_alpha=16)
+
+# Define a reward function
+def reward_fn(response, answer):
+    return 1.0 if answer.lower() in response.lower() else 0.0
+
+# Prepare dataset: list of dicts with prompt, image, answer
+vision_data = [
+    {"prompt": "What is in this image?", "image": "photo.jpg", "answer": "a cat"},
+    # ...
+]
+
+# Train with GRPO
+FastVisionModel.for_training(model)
+trainer = VLMGRPOTrainer(
+    model=model,
+    train_dataset=vision_data,
+    processor=processor,
+    reward_fn=reward_fn,
+    args=VLMGRPOConfig(num_generations=2, max_steps=10),
+)
+result = trainer.train()</code></pre>
+          </div>
+        </div>
       </div>
 
       <!-- ===== Post-Training ===== -->
@@ -323,6 +405,13 @@ model.save_pretrained_merged("./vlm_merged", processor)</code></pre>
             <p>Fine-tune a VLM on text-only data without images. Useful for improving the language component.</p>
             <div class="example-tags"><span class="example-tag">VLM</span><span class="example-tag">Text-Only</span><span class="example-tag">Qwen</span></div>
             <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/11_qwen35_text_only_vlm.py" target="_blank">View source &rarr;</a></p>
+          </div>
+
+          <div class="example-card">
+            <h4>26 &mdash; Vision GRPO Training</h4>
+            <p>End-to-end Vision GRPO training extending GRPO to VLMs. Generates completions conditioned on image+text prompts, scored by reward functions.</p>
+            <div class="example-tags"><span class="example-tag">VLM</span><span class="example-tag">GRPO</span><span class="example-tag">RL</span></div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/26_vision_grpo_training.py" target="_blank">View source &rarr;</a></p>
           </div>
         </div>
       </section>

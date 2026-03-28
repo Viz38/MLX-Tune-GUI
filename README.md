@@ -78,7 +78,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.11** - E2E RL training (DPO, GRPO, ORPO, KTO, SimPO); GRPO gradient fix; KTOConfig/SimPOConfig
+> 🚀 **v0.4.12** - Vision GRPO (`VLMGRPOTrainer`); E2E RL training (DPO, GRPO, ORPO, KTO, SimPO)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -221,11 +221,11 @@ trainer = VLMSFTTrainer(
 trainer.train()
 ```
 
-See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for the full workflow, or [`examples/11_qwen35_text_finetuning.py`](examples/11_qwen35_text_finetuning.py) for text-only fine-tuning on Qwen3.5.
+See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for the full workflow, [`examples/11_qwen35_text_finetuning.py`](examples/11_qwen35_text_finetuning.py) for text-only fine-tuning, or [`examples/26_vision_grpo_training.py`](examples/26_vision_grpo_training.py) for Vision GRPO reasoning.
 
 ### TTS Fine-Tuning
 
-Fine-tune text-to-speech models on Apple Silicon. Supports Orpheus-3B, OuteTTS-1B, Spark-TTS (0.5B), and Sesame/CSM-1B:
+Fine-tune text-to-speech models on Apple Silicon. Supports Orpheus-3B, OuteTTS-1B, Spark-TTS (0.5B), Sesame/CSM-1B, and Qwen3-TTS:
 
 ```python
 from mlx_tune import FastTTSModel, TTSSFTTrainer, TTSSFTConfig, TTSDataCollator
@@ -250,7 +250,7 @@ trainer = TTSSFTTrainer(
 trainer.train()
 ```
 
-See examples: [Orpheus](examples/12_orpheus_tts_finetuning.py), [OuteTTS](examples/14_outetts_finetuning.py), [Spark-TTS](examples/15_spark_tts_finetuning.py).
+See examples: [Orpheus](examples/12_orpheus_tts_finetuning.py), [OuteTTS](examples/14_outetts_finetuning.py), [Spark-TTS](examples/15_spark_tts_finetuning.py), [Qwen3-TTS](examples/20_qwen3_tts_finetuning.py).
 
 ### STT Fine-Tuning
 
@@ -306,6 +306,7 @@ model.push_to_hub("username/my-model")
 | **KTO** | `KTOTrainer` | ✅ Native MLX | Kahneman-Tversky optimization |
 | **SimPO** | `SimPOTrainer` | ✅ Native MLX | Simple preference optimization |
 | **VLM SFT** | `VLMSFTTrainer` | ✅ Native MLX | Vision-Language model fine-tuning |
+| **Vision GRPO** | `VLMGRPOTrainer` | ✅ Native MLX | Vision-Language GRPO reasoning |
 | **TTS SFT** | `TTSSFTTrainer` | ✅ Native MLX | Orpheus, OuteTTS, Spark-TTS, Sesame/CSM |
 | **STT SFT** | `STTSFTTrainer` | ✅ Native MLX | Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral |
 
@@ -316,8 +317,8 @@ Check [`examples/`](examples/) for working code:
 - Complete SFT fine-tuning pipeline (08)
 - RL training overview (09)
 - Vision model fine-tuning — Qwen3.5 (10-11)
-- **RL E2E training** — DPO (21), GRPO (22), ORPO (23), KTO (24), SimPO (25)
-- TTS fine-tuning — Orpheus-3B (12), OuteTTS (14), Spark-TTS (15)
+- **RL E2E training** — DPO (21), GRPO (22), ORPO (23), KTO (24), SimPO (25), Vision GRPO (26)
+- TTS fine-tuning — Orpheus-3B (12), OuteTTS (14), Spark-TTS (15), Qwen3-TTS (20)
 - STT fine-tuning — Whisper (13), Moonshine (16), Qwen3-ASR (17), Canary (18), Voxtral (19)
 
 ## Requirements
@@ -381,7 +382,7 @@ Check [`examples/`](examples/) for working code:
 
 Contributions welcome! Areas that need help:
 - Custom MLX kernels for even faster training
-- More comprehensive test coverage (currently 60%, target 70%+)
+- More test coverage (especially E2E and edge cases)
 - Testing on different M-series chips (M1, M2, M3, M4, M5)
 - Batched audio training (currently batch_size=1)
 - Batched RL training (currently single-sample)

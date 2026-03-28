@@ -15,7 +15,7 @@ Supported Training Methods:
 - STT (Speech-to-Text) fine-tuning
 """
 
-__version__ = "0.4.11"  # E2E RL training support (GRPO fix, KTOConfig, SimPOConfig)
+__version__ = "0.4.12"  # Vision GRPO (VLMGRPOTrainer + VLMGRPOConfig)
 
 from mlx_tune.model import FastLanguageModel
 from mlx_tune.trainer import (
@@ -65,6 +65,8 @@ from mlx_tune.vlm import (
     VLMSFTConfig,
     VLMModelWrapper,
     UnslothVisionDataCollator,
+    VLMGRPOTrainer,
+    VLMGRPOConfig,
     load_vlm_dataset,
 )
 
@@ -158,6 +160,8 @@ __all__ = [
     "VLMSFTConfig",
     "VLMModelWrapper",
     "UnslothVisionDataCollator",
+    "VLMGRPOTrainer",
+    "VLMGRPOConfig",
     # Text-to-Speech Models
     "FastTTSModel",
     "TTSModelWrapper",

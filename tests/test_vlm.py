@@ -443,3 +443,86 @@ class TestImports:
     def test_load_vlm_dataset(self):
         from mlx_tune import load_vlm_dataset
         assert load_vlm_dataset is not None
+
+    def test_vlm_grpo_trainer(self):
+        from mlx_tune import VLMGRPOTrainer
+        assert VLMGRPOTrainer is not None
+
+    def test_vlm_grpo_config(self):
+        from mlx_tune import VLMGRPOConfig
+        assert VLMGRPOConfig is not None
+
+
+# ============================================================================
+# Test VLMGRPOConfig
+# ============================================================================
+
+
+class TestVLMGRPOConfig:
+    """Test VLMGRPOConfig."""
+
+    def test_default_values(self):
+        from mlx_tune.vlm import VLMGRPOConfig
+        config = VLMGRPOConfig()
+        assert config.beta == 0.04
+        assert config.num_generations == 2
+        assert config.temperature == 0.7
+        assert config.max_completion_length == 128
+        assert config.learning_rate == 1e-6
+        assert config.max_steps == -1
+        assert config.logging_steps == 1
+        assert config.save_steps == 100
+        assert config.output_dir == "./vlm_grpo_outputs"
+        assert config.reward_fn is None
+
+    def test_custom_values(self):
+        from mlx_tune.vlm import VLMGRPOConfig
+        config = VLMGRPOConfig(
+            beta=0.1,
+            num_generations=4,
+            temperature=0.9,
+            max_completion_length=256,
+            learning_rate=5e-7,
+            max_steps=20,
+            logging_steps=5,
+            output_dir="./my_vlm_grpo",
+        )
+        assert config.beta == 0.1
+        assert config.num_generations == 4
+        assert config.temperature == 0.9
+        assert config.max_completion_length == 256
+        assert config.learning_rate == 5e-7
+        assert config.max_steps == 20
+        assert config.logging_steps == 5
+        assert config.output_dir == "./my_vlm_grpo"
+
+    def test_custom_reward_fn(self):
+        from mlx_tune.vlm import VLMGRPOConfig
+        fn = lambda r, a: 1.0
+        config = VLMGRPOConfig(reward_fn=fn)
+        assert config.reward_fn is fn
+
+
+# ============================================================================
+# Test VLMGRPOTrainer (without model)
+# ============================================================================
+
+
+class TestVLMGRPOTrainer:
+    """Test VLMGRPOTrainer initialization (no real model needed)."""
+
+    def test_class_exists(self):
+        from mlx_tune.vlm import VLMGRPOTrainer
+        assert VLMGRPOTrainer is not None
+
+    def test_config_integration(self):
+        """VLMGRPOConfig params should be accessible."""
+        from mlx_tune.vlm import VLMGRPOConfig
+        config = VLMGRPOConfig(
+            num_generations=3,
+            max_steps=15,
+            beta=0.08,
+        )
+        assert config.num_generations == 3
+        assert config.max_steps == 15
+        assert config.beta == 0.08
