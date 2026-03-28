@@ -45,6 +45,7 @@
         <li><a href="#rl">RL Methods</a></li>
         <li><a href="#vlm">Vision Models</a></li>
         <li><a href="#audio">Audio Models</a></li>
+        <li><a href="#embedding">Embedding Models</a></li>
       </ul>
     </aside>
 
@@ -776,6 +777,79 @@ trainer = STTSFTTrainer(
 trainer.train()</code></pre>
             </div>
             <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/19_voxtral_stt_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Embedding Models -->
+      <h2 id="embedding">Embedding Models</h2>
+      <div class="example-grid">
+
+        <div class="example-card">
+          <h4>27 &mdash; BERT Embedding Fine-Tuning</h4>
+          <p>Fine-tune all-MiniLM-L6-v2 (BERT) for semantic similarity using InfoNCE contrastive loss with in-batch negatives. Includes training, encoding, and similarity testing.</p>
+          <div class="example-tags"><span class="example-tag">Embedding</span><span class="example-tag">BERT</span><span class="example-tag">InfoNCE</span><span class="example-tag">Semantic Search</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastEmbeddingModel, EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
+
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "mlx-community/all-MiniLM-L6-v2-bf16",
+    pooling_strategy="mean",
+)
+model = FastEmbeddingModel.get_peft_model(model, r=16, lora_alpha=16,
+    target_modules=["query", "key", "value"])
+
+train_data = [
+    {"anchor": "A man is eating food.", "positive": "A man is having a meal."},
+    # ... more pairs
+]
+trainer = EmbeddingSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=EmbeddingDataCollator(model, tokenizer),
+    train_dataset=train_data,
+    args=EmbeddingSFTConfig(loss_type="infonce", temperature=0.05, max_steps=50),
+)
+trainer.train()
+
+# Encode and compare
+embeddings = model.encode(["Hello world", "Hi there"])
+similarity = (embeddings[0] * embeddings[1]).sum().item()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/27_embedding_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>28 &mdash; Qwen3-Embedding Fine-Tuning</h4>
+          <p>Fine-tune Qwen3-Embedding-0.6B (4-bit quantized) for domain-specific search. Decoder-based architecture with last-token pooling. Includes adapter save/load verification.</p>
+          <div class="example-tags"><span class="example-tag">Embedding</span><span class="example-tag">Qwen3</span><span class="example-tag">4-bit</span><span class="example-tag">Save/Load</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastEmbeddingModel, EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
+
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ",
+    pooling_strategy="last_token",  # Decoder-based model
+)
+model = FastEmbeddingModel.get_peft_model(model, r=8, lora_alpha=16)
+# Auto-detected targets: q_proj, k_proj, v_proj, o_proj
+
+trainer = EmbeddingSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=EmbeddingDataCollator(model, tokenizer),
+    train_dataset=train_data,
+    args=EmbeddingSFTConfig(loss_type="infonce", temperature=0.05, max_steps=30),
+)
+trainer.train()
+
+# Save and reload adapter
+model.save_pretrained("./adapter")
+model2.load_adapter("./adapter")  # On fresh model with LoRA applied</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/28_qwen3_embedding_finetuning.py" target="_blank">Full source &rarr;</a></p>
           </div>
         </div>
       </div>

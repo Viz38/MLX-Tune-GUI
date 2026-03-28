@@ -13,9 +13,10 @@ Supported Training Methods:
 - VLM (Vision Language Model) fine-tuning
 - TTS (Text-to-Speech) fine-tuning
 - STT (Speech-to-Text) fine-tuning
+- Embedding (Sentence Embedding) fine-tuning
 """
 
-__version__ = "0.4.12"  # Vision GRPO (VLMGRPOTrainer + VLMGRPOConfig)
+__version__ = "0.4.13"  # Embedding fine-tuning
 
 from mlx_tune.model import FastLanguageModel
 from mlx_tune.trainer import (
@@ -56,6 +57,10 @@ from mlx_tune.losses import (
     grpo_loss,
     grpo_batch_loss,
     compute_reference_logprobs,
+    # Contrastive losses (embedding fine-tuning)
+    infonce_loss,
+    cosine_embedding_loss,
+    triplet_loss,
 )
 
 # Vision Language Models
@@ -87,6 +92,15 @@ from mlx_tune.stt import (
     STTSFTConfig,
     STTDataCollator,
     STTProcessor,
+)
+
+# Embedding Models
+from mlx_tune.embeddings import (
+    FastEmbeddingModel,
+    EmbeddingModelWrapper,
+    EmbeddingSFTTrainer,
+    EmbeddingSFTConfig,
+    EmbeddingDataCollator,
 )
 
 # Audio Profiles and Codec Adapters
@@ -154,6 +168,12 @@ __all__ = [
     "KTOConfig",
     "SimPOTrainer",
     "SimPOConfig",
+    # Embedding Models
+    "FastEmbeddingModel",
+    "EmbeddingModelWrapper",
+    "EmbeddingSFTTrainer",
+    "EmbeddingSFTConfig",
+    "EmbeddingDataCollator",
     # Vision Models
     "FastVisionModel",
     "VLMSFTTrainer",
@@ -195,6 +215,10 @@ __all__ = [
     "grpo_loss",
     "grpo_batch_loss",
     "compute_reference_logprobs",
+    # Contrastive Losses (Embedding fine-tuning)
+    "infonce_loss",
+    "cosine_embedding_loss",
+    "triplet_loss",
     # Utilities
     "prepare_dataset",
     "prepare_preference_dataset",

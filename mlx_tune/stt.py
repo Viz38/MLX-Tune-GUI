@@ -927,8 +927,15 @@ class STTModelWrapper:
                 parts = name.split(".")
                 parent = self.model
                 for p in parts[:-1]:
-                    parent = getattr(parent, p)
-                setattr(parent, parts[-1], fused)
+                    if p.isdigit():
+                        parent = parent[int(p)]
+                    else:
+                        parent = getattr(parent, p)
+                last = parts[-1]
+                if last.isdigit():
+                    parent[int(last)] = fused
+                else:
+                    setattr(parent, last, fused)
                 fused_count += 1
 
         if fused_count > 0:
