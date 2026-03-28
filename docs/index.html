@@ -145,7 +145,7 @@
 
       <!-- ===== Hero ===== -->
       <section class="hero hero-glow">
-        <span class="hero-version">v0.4.11</span>
+        <span class="hero-version">v0.4.12</span>
         <img src="assets/img/logo.png" alt="MLX-Tune" class="hero-logo">
         <h1 class="hero-tagline">Fine-tune LLMs, Vision, and Audio models on your Mac</h1>
         <p class="hero-subtitle">SFT, DPO, GRPO, Vision, TTS, and STT fine-tuning &mdash; natively on MLX. Unsloth-compatible API.</p>
@@ -387,6 +387,11 @@ uv pip install -e .</code></pre>
               <td><strong>VLM SFT</strong></td>
               <td><code>VLMSFTTrainer</code></td>
               <td>Vision-Language model fine-tuning</td>
+            </tr>
+            <tr>
+              <td><strong>Vision GRPO</strong></td>
+              <td><code>VLMGRPOTrainer</code> + <code>VLMGRPOConfig</code></td>
+              <td>Vision-Language GRPO reasoning training</td>
             </tr>
             <tr>
               <td><strong>TTS SFT</strong></td>

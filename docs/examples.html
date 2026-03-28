@@ -435,6 +435,32 @@ model, processor = FastVisionModel.from_pretrained(
             <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/11_qwen35_text_finetuning.py" target="_blank">Full source &rarr;</a></p>
           </div>
         </div>
+
+        <div class="example-card">
+          <h4>26 &mdash; Vision GRPO Training</h4>
+          <p>End-to-end Vision GRPO training extending GRPO to VLMs. Generates completions conditioned on image+text prompts, scored by reward functions.</p>
+          <div class="example-tags"><span class="example-tag">VLM</span><span class="example-tag">GRPO</span><span class="example-tag">Qwen3.5</span><span class="example-tag">Vision</span><span class="example-tag">RL</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastVisionModel
+from mlx_tune.vlm import VLMGRPOTrainer, VLMGRPOConfig
+
+model, processor = FastVisionModel.from_pretrained(
+    "mlx-community/Qwen3.5-0.8B-bf16",
+)
+model = FastVisionModel.get_peft_model(model, r=16, lora_alpha=16)
+
+trainer = VLMGRPOTrainer(
+    model=model, train_dataset=vision_data,
+    processor=processor, reward_fn=reward_fn,
+    args=VLMGRPOConfig(num_generations=2, max_steps=10),
+)
+trainer.train()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/26_vision_grpo_training.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
       </div>
 
       <!-- Audio Models -->

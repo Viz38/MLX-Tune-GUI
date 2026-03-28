@@ -87,6 +87,7 @@ def main():
 
     # 1. Load model
     model, tokenizer = FastLanguageModel.from_pretrained(
+        # Any mlx-lm model works: Llama, Gemma, Mistral, Phi, Qwen, etc.
         "mlx-community/Qwen3.5-0.8B-MLX-4bit",
         max_seq_length=1024,
     )

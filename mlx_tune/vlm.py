@@ -1287,6 +1287,406 @@ class VLMSFTConfig:
             setattr(self, k, v)
 
 
+class VLMGRPOConfig:
+    """
+    Configuration for Vision Language Model GRPO training.
+
+    Mirrors GRPOConfig but tailored for VLM-specific training where
+    image+text prompts are used for generation and reward scoring.
+    """
+
+    def __init__(
+        self,
+        beta: float = 0.04,
+        num_generations: int = 2,
+        temperature: float = 0.7,
+        max_completion_length: int = 128,
+        output_dir: str = "./vlm_grpo_outputs",
+        learning_rate: float = 1e-6,
+        max_steps: int = -1,
+        num_train_epochs: int = 1,
+        logging_steps: int = 1,
+        save_steps: int = 100,
+        reward_fn: Optional[Any] = None,
+    ):
+        self.beta = beta
+        self.num_generations = num_generations
+        self.temperature = temperature
+        self.max_completion_length = max_completion_length
+        self.output_dir = output_dir
+        self.learning_rate = learning_rate
+        self.max_steps = max_steps
+        self.num_train_epochs = num_train_epochs
+        self.logging_steps = logging_steps
+        self.save_steps = save_steps
+        self.reward_fn = reward_fn
+
+
+class VLMGRPOTrainer:
+    """
+    Vision-aware GRPO (Group Relative Policy Optimization) Trainer.
+
+    Extends GRPO to vision-language models by generating text completions
+    conditioned on image+text prompts, scoring with reward functions, and
+    updating the model via policy gradient with group-normalized advantages.
+
+    Key differences from text-only GRPOTrainer:
+    - Forward pass includes pixel_values for vision context
+    - Generation uses VLM stream_generate with image inputs
+    - Batch size forced to 1 (variable vision token counts per image)
+
+    Example:
+        >>> from mlx_tune import FastVisionModel
+        >>> from mlx_tune.vlm import VLMGRPOTrainer, VLMGRPOConfig
+        >>>
+        >>> model, processor = FastVisionModel.from_pretrained(
+        ...     "mlx-community/Qwen3.5-0.8B-bf16",
+        ... )
+        >>> model = FastVisionModel.get_peft_model(model, r=16, lora_alpha=16)
+        >>>
+        >>> trainer = VLMGRPOTrainer(
+        ...     model=model,
+        ...     train_dataset=vision_dataset,
+        ...     processor=processor,
+        ...     reward_fn=my_reward_fn,
+        ...     args=VLMGRPOConfig(num_generations=2, max_steps=10),
+        ... )
+        >>> trainer.train()
+    """
+
+    def __init__(
+        self,
+        model: Any,
+        train_dataset: Any,
+        processor: Optional[Any] = None,
+        reward_fn: Optional[Any] = None,
+        args: Optional[VLMGRPOConfig] = None,
+        **kwargs,
+    ):
+        _require_mlx_vlm()
+
+        self.model = model  # VLMModelWrapper
+        self.train_dataset = train_dataset
+        self.processor = processor or getattr(model, 'processor', None)
+
+        if args is None:
+            args = VLMGRPOConfig()
+
+        self.config = args
+        self.beta = args.beta
+        self.num_generations = args.num_generations
+        self.max_completion_length = args.max_completion_length
+        self.temperature = args.temperature
+        self.learning_rate = args.learning_rate
+        self.max_steps = args.max_steps
+        self.logging_steps = args.logging_steps
+        self.save_steps = args.save_steps
+        self.reward_fn = reward_fn or args.reward_fn
+
+        self.output_dir = Path(args.output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.adapter_path = self.output_dir / "adapters"
+
+        # Determine total iterations
+        if self.max_steps > 0:
+            self.iters = self.max_steps
+        else:
+            dataset_size = len(train_dataset) if hasattr(train_dataset, '__len__') else 100
+            self.iters = max(1, dataset_size * args.num_train_epochs)
+
+        # Default reward if none provided
+        if self.reward_fn is None:
+            self.reward_fn = lambda response, answer: len(response.split()) / 100.0
+
+        print(f"VLMGRPOTrainer initialized:")
+        print(f"  Num generations: {self.num_generations}")
+        print(f"  Max completion length: {self.max_completion_length}")
+        print(f"  Temperature: {self.temperature}")
+        print(f"  Beta: {self.beta}")
+        print(f"  Learning rate: {self.learning_rate}")
+        print(f"  Iterations: {self.iters}")
+        print(f"  Custom reward fn: {'Yes' if reward_fn else 'Default (length-based)'}")
+
+    def train(self):
+        """Train using Vision GRPO."""
+        print("=" * 70)
+        print("Starting Vision GRPO Training")
+        print("=" * 70)
+        return self._train_native()
+
+    def _train_native(self):
+        """
+        Two-phase Vision GRPO training:
+
+        Phase 1 (no gradients): Generate N completions conditioned on image+text,
+            score with reward function, compute group-normalized advantages.
+        Phase 2 (with gradients): Forward pass on generated tokens with image context
+            to compute log probs, apply policy gradient loss, update model.
+        """
+        import mlx.core as mx
+        import mlx.nn as nn
+        import mlx.optimizers as optim
+        import tempfile
+        import os
+        import re
+
+        print("\n[Using Native Vision GRPO Training with Policy Gradient]")
+
+        wrapper = self.model if isinstance(self.model, VLMModelWrapper) else None
+        actual_model = wrapper.model if wrapper else self.model
+
+        # Ensure training mode
+        if hasattr(actual_model, 'train'):
+            actual_model.train()
+
+        # Get model config for image token index
+        config_dict = (actual_model.config.__dict__
+                       if hasattr(actual_model.config, "__dict__")
+                       else actual_model.config)
+        image_token_index = config_dict.get(
+            "image_token_index", config_dict.get("image_token_id")
+        )
+
+        lr_schedule = optim.cosine_decay(self.learning_rate, self.iters)
+        optimizer = optim.AdamW(learning_rate=lr_schedule)
+
+        # Vision-aware policy gradient loss function
+        def pg_loss_fn(model, input_ids, pixel_values, extra_kwargs,
+                       prompt_len, advantage):
+            """Policy gradient loss with vision inputs."""
+            inputs = input_ids[:, :-1]
+            targets = input_ids[:, 1:]
+
+            # Forward pass with vision context
+            fwd_kwargs = {"input_ids": inputs}
+            if pixel_values is not None:
+                fwd_kwargs["pixel_values"] = pixel_values
+            for k, v in extra_kwargs.items():
+                fwd_kwargs[k] = v
+
+            logits = model(**fwd_kwargs)
+            # Handle LanguageModelOutput dataclass (mlx-vlm 0.4.0+)
+            if hasattr(logits, "logits"):
+                logits = logits.logits
+            elif isinstance(logits, tuple):
+                logits = logits[0]
+
+            # Log probabilities for completion tokens
+            log_probs = nn.log_softmax(logits, axis=-1)
+            target_log_probs = mx.take_along_axis(
+                log_probs, targets[:, :, None], axis=-1
+            ).squeeze(-1)
+
+            # Mask: only score completion tokens (after prompt)
+            seq_len = targets.shape[1]
+            positions = mx.arange(seq_len)
+            comp_mask = (positions >= (prompt_len - 1)).astype(
+                target_log_probs.dtype
+            )
+
+            comp_log_prob = (target_log_probs * comp_mask[None, :]).sum(axis=-1)
+            return -advantage * comp_log_prob[0]
+
+        loss_and_grad = nn.value_and_grad(actual_model, pg_loss_fn)
+
+        print(f"\nStarting training for {self.iters} iterations...")
+        print(f"  Generating {self.num_generations} completions per prompt")
+
+        total_loss = 0.0
+        total_reward = 0.0
+
+        for step in range(self.iters):
+            sample_idx = step % len(self.train_dataset)
+            sample = self.train_dataset[sample_idx]
+
+            prompt_text = sample.get('prompt', '')
+            image_source = sample.get('image', sample.get('image_path'))
+            answer = sample.get('answer', '')
+
+            # Build chat messages
+            if image_source is not None:
+                messages = [{"role": "user", "content": [
+                    {"type": "image"},
+                    {"type": "text", "text": prompt_text},
+                ]}]
+            else:
+                messages = [{"role": "user", "content": [
+                    {"type": "text", "text": prompt_text},
+                ]}]
+
+            formatted_prompt = self.processor.apply_chat_template(
+                messages, tokenize=False, add_generation_prompt=True,
+            )
+
+            # Prepare inputs (handles image token insertion + pixel processing)
+            temp_files = []
+            try:
+                if image_source is not None:
+                    from PIL import Image as PILImage
+                    image_paths = []
+                    images = ([image_source] if not isinstance(image_source, list)
+                              else image_source)
+                    for img in images:
+                        if isinstance(img, PILImage.Image):
+                            tmp = tempfile.NamedTemporaryFile(
+                                suffix=".png", delete=False
+                            )
+                            img.save(tmp.name)
+                            image_paths.append(tmp.name)
+                            temp_files.append(tmp.name)
+                        else:
+                            image_paths.append(img)
+
+                    inputs = prepare_inputs(
+                        processor=self.processor,
+                        images=image_paths,
+                        prompts=formatted_prompt,
+                        image_token_index=image_token_index,
+                    )
+                else:
+                    tokenizer = getattr(self.processor, 'tokenizer',
+                                        self.processor)
+                    ids = tokenizer.encode(formatted_prompt)
+                    inputs = {"input_ids": mx.array([ids])}
+
+                prompt_input_ids = inputs["input_ids"]  # [1, prompt_len]
+                pixel_values = inputs.get("pixel_values")
+                extra_kwargs = {
+                    k: v for k, v in inputs.items()
+                    if k not in ("input_ids", "pixel_values", "attention_mask")
+                }
+                prompt_len = prompt_input_ids.shape[1]
+
+                # ---- Phase 1: Generate completions and score ----
+                completions = []
+                rewards = []
+
+                for _ in range(self.num_generations):
+                    text = ""
+                    gen_kwargs = dict(
+                        max_tokens=self.max_completion_length,
+                        temp=self.temperature,
+                    )
+                    for response in vlm_stream_generate(
+                        actual_model, self.processor,
+                        prompt=formatted_prompt,
+                        input_ids=prompt_input_ids,
+                        pixel_values=pixel_values,
+                        mask=inputs.get("attention_mask"),
+                        **extra_kwargs, **gen_kwargs,
+                    ):
+                        text += response.text
+
+                    # Strip thinking tags (Qwen3.5)
+                    text = re.sub(r"<think>.*?</think>\s*", "", text,
+                                  flags=re.DOTALL)
+                    text = re.sub(r"</think>\s*", "", text)
+                    text = re.sub(r"<think>\s*", "", text)
+                    text = text.strip()
+
+                    reward = self.reward_fn(text, answer)
+                    rewards.append(reward)
+
+                    tokenizer = getattr(self.processor, 'tokenizer',
+                                        self.processor)
+                    completion_ids = tokenizer.encode(
+                        text, add_special_tokens=False
+                    )
+                    completions.append({
+                        'text': text,
+                        'completion_ids': completion_ids,
+                    })
+
+                rewards_arr = mx.array(rewards)
+                mean_reward = mx.mean(rewards_arr)
+                std_reward = mx.std(rewards_arr)
+                mx.eval(mean_reward, std_reward)
+
+                avg_reward = mean_reward.item()
+                total_reward += avg_reward
+
+                # Skip update if all rewards equal (std=0)
+                if std_reward.item() < 1e-8:
+                    if (step + 1) % self.logging_steps == 0:
+                        avg_loss = (total_loss / self.logging_steps
+                                    if total_loss > 0 else 0.0)
+                        avg_rew = total_reward / self.logging_steps
+                        print(f"  Step {step + 1}/{self.iters} | "
+                              f"Loss: {avg_loss:.4f} | "
+                              f"Reward: {avg_rew:.3f} (skipped, equal rewards)")
+                        total_loss = 0.0
+                        total_reward = 0.0
+                    continue
+
+                advantages = (rewards_arr - mean_reward) / (std_reward + 1e-8)
+                mx.eval(advantages)
+
+                # ---- Phase 2: Policy gradient loss with vision ----
+                step_loss = 0.0
+                for i, comp in enumerate(completions):
+                    adv = advantages[i]
+                    comp_ids = mx.array(comp['completion_ids'])
+
+                    if comp_ids.size == 0:
+                        continue
+
+                    # Build full sequence: prompt + completion
+                    full_ids = mx.concatenate([
+                        prompt_input_ids[0], comp_ids
+                    ])[None, :]  # [1, full_len]
+
+                    loss, grads = loss_and_grad(
+                        actual_model, full_ids, pixel_values,
+                        extra_kwargs, prompt_len, adv,
+                    )
+                    optimizer.update(actual_model, grads)
+                    mx.eval(actual_model.parameters(), optimizer.state)
+
+                    step_loss += loss.item()
+
+                total_loss += step_loss / max(len(completions), 1)
+
+            finally:
+                for f in temp_files:
+                    try:
+                        os.unlink(f)
+                    except OSError:
+                        pass
+
+            if (step + 1) % self.logging_steps == 0:
+                avg_loss = total_loss / self.logging_steps
+                avg_rew = total_reward / self.logging_steps
+                print(f"  Step {step + 1}/{self.iters} | "
+                      f"Loss: {avg_loss:.4f} | Reward: {avg_rew:.3f}")
+                total_loss = 0.0
+                total_reward = 0.0
+
+            if (step + 1) % self.save_steps == 0:
+                if wrapper:
+                    wrapper.save_pretrained(str(self.adapter_path))
+                print(f"    Saved checkpoint at step {step + 1}")
+
+        # Final save
+        if wrapper:
+            wrapper.save_pretrained(str(self.adapter_path))
+        else:
+            self.adapter_path.mkdir(parents=True, exist_ok=True)
+            from mlx.utils import tree_flatten
+            adapter_weights = dict(
+                tree_flatten(actual_model.trainable_parameters())
+            )
+            mx.save_safetensors(
+                str(self.adapter_path / "adapters.safetensors"),
+                adapter_weights,
+            )
+
+        print("\n" + "=" * 70)
+        print("Vision GRPO Training Complete!")
+        print("=" * 70)
+        print(f"  Adapters saved to: {self.adapter_path}")
+        return {"status": "success", "adapter_path": str(self.adapter_path)}
+
+
 def load_vlm_dataset(
     dataset_name: Optional[str] = None,
     dataset_path: Optional[str] = None,
