@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Fine-tune LLMs, Vision, and Audio models on your Mac</strong><br>
-  <em>SFT, DPO, GRPO, Vision, TTS, and STT fine-tuning — natively on MLX. Unsloth-compatible API.</em>
+  <em>SFT, DPO, GRPO, Vision, TTS, STT, and Embedding fine-tuning — natively on MLX. Unsloth-compatible API.</em>
 </p>
 
 <p align="center">
@@ -41,7 +41,7 @@
 
 Bringing the [Unsloth](https://github.com/unslothai/unsloth) experience to Mac users via Apple's [MLX](https://github.com/ml-explore/mlx) framework.
 
-- 🚀 **Fine-tune LLMs, VLMs, TTS & STT** locally on your Mac (M1/M2/M3/M4/M5)
+- 🚀 **Fine-tune LLMs, VLMs, TTS, STT & Embeddings** locally on your Mac (M1/M2/M3/M4/M5)
 - 💾 **Leverage unified memory** (up to 512GB on Mac Studio)
 - 🔄 **Unsloth-compatible API** - your existing training scripts just work!
 - 📦 **Export anywhere** - HuggingFace format, GGUF for Ollama/llama.cpp
@@ -73,7 +73,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.12** - Vision GRPO (`VLMGRPOTrainer`); E2E RL training (DPO, GRPO, ORPO, KTO, SimPO)
+> 🚀 **v0.4.13** - Embedding fine-tuning (BERT, Qwen3-Embedding); Vision GRPO; E2E RL training
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -94,6 +94,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 | **TTS Fine-Tuning** | ✅ Stable | **Orpheus, OuteTTS, Spark-TTS, Sesame/CSM, Qwen3-TTS** |
 | **STT Fine-Tuning** | ✅ Stable | **Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral** |
 | **`convert()`** | ✅ Stable | **HF → MLX conversion (LLM, TTS, STT)** |
+| **Embedding Fine-Tuning** | ✅ Stable | **BERT, ModernBERT, Qwen3-Embedding (InfoNCE/contrastive)** |
 | **`push_to_hub()`** | ✅ Stable | **Upload to HuggingFace Hub** |
 | PyPI Package | ✅ Available | `uv pip install mlx-tune` |
 
@@ -272,6 +273,39 @@ trainer.train()
 
 See examples: [Whisper](examples/13_whisper_stt_finetuning.py), [Moonshine](examples/16_moonshine_stt_finetuning.py), [Qwen3-ASR](examples/17_qwen3_asr_finetuning.py), [Canary](examples/18_canary_stt_finetuning.py), [Voxtral](examples/19_voxtral_stt_finetuning.py).
 
+### Embedding Fine-Tuning
+
+Fine-tune sentence embedding models for semantic search using contrastive learning (InfoNCE loss). Supports BERT, ModernBERT, Qwen3-Embedding, and more:
+
+```python
+from mlx_tune import FastEmbeddingModel, EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
+
+# Load embedding model (BERT or Qwen3-Embedding)
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "mlx-community/all-MiniLM-L6-v2-bf16",  # or Qwen3-Embedding-0.6B-4bit-DWQ
+    pooling_strategy="mean",                  # "mean", "cls", or "last_token"
+)
+model = FastEmbeddingModel.get_peft_model(model, r=16, lora_alpha=16)
+
+# Train with anchor-positive pairs (in-batch negatives via InfoNCE)
+trainer = EmbeddingSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=EmbeddingDataCollator(model, tokenizer),
+    train_dataset=[{"anchor": "query text", "positive": "relevant passage"}, ...],
+    args=EmbeddingSFTConfig(
+        loss_type="infonce", temperature=0.05,
+        per_device_train_batch_size=32, max_steps=50,
+    ),
+)
+trainer.train()
+
+# Encode & compare
+embeddings = model.encode(["Hello world", "Hi there"])
+similarity = (embeddings[0] * embeddings[1]).sum().item()
+```
+
+See examples: [BERT](examples/27_embedding_finetuning.py), [Qwen3-Embedding](examples/28_qwen3_embedding_finetuning.py).
+
 ### Post-Training Workflow
 
 All model types (LLM, VLM, TTS, STT) support the full post-training workflow:
@@ -304,6 +338,7 @@ model.push_to_hub("username/my-model")
 | **Vision GRPO** | `VLMGRPOTrainer` | ✅ Native MLX | Vision-Language GRPO reasoning |
 | **TTS SFT** | `TTSSFTTrainer` | ✅ Native MLX | Orpheus, OuteTTS, Spark-TTS, Sesame/CSM |
 | **STT SFT** | `STTSFTTrainer` | ✅ Native MLX | Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral |
+| **Embedding** | `EmbeddingSFTTrainer` | ✅ Native MLX | BERT, ModernBERT, Qwen3-Embedding (InfoNCE) |
 
 ## Examples
 
@@ -315,6 +350,7 @@ Check [`examples/`](examples/) for working code:
 - **RL E2E training** — DPO (21), GRPO (22), ORPO (23), KTO (24), SimPO (25), Vision GRPO (26)
 - TTS fine-tuning — Orpheus-3B (12), OuteTTS (14), Spark-TTS (15), Qwen3-TTS (20)
 - STT fine-tuning — Whisper (13), Moonshine (16), Qwen3-ASR (17), Canary (18), Voxtral (19)
+- Embedding fine-tuning — BERT/MiniLM (27), Qwen3-Embedding (28)
 
 ## Requirements
 
@@ -393,6 +429,7 @@ Apache 2.0 - See [LICENSE](LICENSE) file.
 - [MLX-LM](https://github.com/ml-explore/mlx-lm) - LLM utilities for MLX
 - [MLX-VLM](https://github.com/Blaizzy/mlx-vlm) - Vision model support
 - [MLX-Audio](https://github.com/Blaizzy/mlx-audio) - Audio inference (TTS/STT) for MLX
+- [MLX-Embeddings](https://github.com/Blaizzy/mlx-embeddings) - Embedding models for MLX
 
 ---
 
