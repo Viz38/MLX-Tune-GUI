@@ -393,20 +393,16 @@ class SFTTrainer:
         }
 
         # Add target modules (keys) if available
-        target_modules = lora_config.get('target_modules', [])
-        if target_modules:
-            # Convert to mlx_lm format (full paths)
-            short_to_full = {
-                'q_proj': 'self_attn.q_proj',
-                'k_proj': 'self_attn.k_proj',
-                'v_proj': 'self_attn.v_proj',
-                'o_proj': 'self_attn.o_proj',
-                'gate_proj': 'mlp.gate_proj',
-                'up_proj': 'mlp.up_proj',
-                'down_proj': 'mlp.down_proj',
-            }
-            keys = [short_to_full.get(m, m) for m in target_modules]
-            adapter_config["lora_parameters"]["keys"] = keys
+        # Prefer cached resolved keys (set during _apply_lora() before types change)
+        if hasattr(self.model, '_resolved_lora_keys') and self.model._resolved_lora_keys:
+            adapter_config["lora_parameters"]["keys"] = self.model._resolved_lora_keys
+        else:
+            target_modules = lora_config.get('target_modules', [])
+            if target_modules:
+                from mlx_tune.model import _resolve_target_modules
+                model_for_resolve = actual_model.model if hasattr(actual_model, 'model') else actual_model
+                keys = _resolve_target_modules(model_for_resolve, target_modules)
+                adapter_config["lora_parameters"]["keys"] = keys
 
         # Save to adapter_config.json
         config_path = self.adapter_path / "adapter_config.json"

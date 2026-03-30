@@ -16,7 +16,7 @@ Supported Training Methods:
 - Embedding (Sentence Embedding) fine-tuning
 """
 
-__version__ = "0.4.13"  # Embedding fine-tuning
+__version__ = "0.4.14"  # MoE fine-tuning
 
 from mlx_tune.model import FastLanguageModel
 from mlx_tune.trainer import (

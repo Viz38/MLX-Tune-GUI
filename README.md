@@ -78,7 +78,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.13** - Embedding fine-tuning (BERT, Qwen3-Embedding); Vision GRPO; E2E RL training
+> 🚀 **v0.4.14** - MoE fine-tuning (Qwen3.5-35B-A3B, Phi-3.5-MoE, Mixtral); Embedding fine-tuning; Vision GRPO
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -96,6 +96,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 | Column Mapping | ✅ Stable | `apply_column_mapping()` auto-rename |
 | Dataset Config | ✅ Stable | `HFDatasetConfig` structured loading |
 | Vision Models | ✅ Stable | Full VLM fine-tuning via mlx-vlm |
+| **MoE Fine-Tuning** | ✅ Stable | **Qwen3.5-35B-A3B, Phi-3.5-MoE, Mixtral, DeepSeek, 39+ architectures** |
 | **TTS Fine-Tuning** | ✅ Stable | **Orpheus, OuteTTS, Spark-TTS, Sesame/CSM, Qwen3-TTS** |
 | **STT Fine-Tuning** | ✅ Stable | **Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral** |
 | **`convert()`** | ✅ Stable | **HF → MLX conversion (LLM, TTS, STT)** |
@@ -311,6 +312,33 @@ similarity = (embeddings[0] * embeddings[1]).sum().item()
 
 See examples: [BERT](examples/27_embedding_finetuning.py), [Qwen3-Embedding](examples/28_qwen3_embedding_finetuning.py).
 
+### MoE Fine-Tuning
+
+Fine-tune Mixture of Experts models — 39+ architectures supported automatically. MLX-Tune detects MoE layers and applies per-expert LoRA via `LoRASwitchLinear`:
+
+```python
+from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
+
+# Load any MoE model — same API as dense models!
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name="mlx-community/Qwen3.5-35B-A3B-4bit",  # 35B total, 3B active
+    max_seq_length=2048,
+    load_in_4bit=True,
+)
+
+# Same target_modules — MoE paths resolved automatically
+model = FastLanguageModel.get_peft_model(
+    model, r=8,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+)
+# Prints: "MoE architecture detected — LoRA will target expert layers (SwitchLinear)"
+```
+
+**Supported MoE models**: Qwen3.5-35B-A3B, Qwen3-30B-A3B, Phi-3.5-MoE, Mixtral, DeepSeek-V2/V3, GLM-MoE, and all other MoE architectures in mlx-lm.
+
+See examples: [Qwen3.5 MoE](examples/29_qwen35_moe_finetuning.py), [Phi-3.5 MoE](examples/30_phi35_moe_finetuning.py).
+
 ### Post-Training Workflow
 
 All model types (LLM, VLM, TTS, STT) support the full post-training workflow:
@@ -344,6 +372,7 @@ model.push_to_hub("username/my-model")
 | **TTS SFT** | `TTSSFTTrainer` | ✅ Native MLX | Orpheus, OuteTTS, Spark-TTS, Sesame/CSM |
 | **STT SFT** | `STTSFTTrainer` | ✅ Native MLX | Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral |
 | **Embedding** | `EmbeddingSFTTrainer` | ✅ Native MLX | BERT, ModernBERT, Qwen3-Embedding (InfoNCE) |
+| **MoE** | `SFTTrainer` | ✅ Native MLX | Qwen3.5-MoE, Phi-3.5-MoE, Mixtral, DeepSeek (39+ archs) |
 
 ## Examples
 
@@ -356,6 +385,7 @@ Check [`examples/`](examples/) for working code:
 - TTS fine-tuning — Orpheus-3B (12), OuteTTS (14), Spark-TTS (15), Qwen3-TTS (20)
 - STT fine-tuning — Whisper (13), Moonshine (16), Qwen3-ASR (17), Canary (18), Voxtral (19)
 - Embedding fine-tuning — BERT/MiniLM (27), Qwen3-Embedding (28)
+- **MoE fine-tuning** — Qwen3.5-35B-A3B (29), Phi-3.5-MoE (30)
 
 ## Requirements
 

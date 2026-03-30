@@ -854,6 +854,70 @@ model2.load_adapter("./adapter")  # On fresh model with LoRA applied</code></pre
         </div>
       </div>
 
+      <!-- MoE Fine-Tuning Section -->
+      <div class="section" id="moe">
+        <div class="section-label">Mixture of Experts</div>
+        <h2 style="margin-top: 0;">MoE Fine-Tuning</h2>
+        <p>Fine-tune Mixture of Experts models with per-expert LoRA. Same API as dense models &mdash; MoE detection is automatic.</p>
+
+        <div class="example-grid">
+          <div class="example-card">
+            <span class="example-badge">MoE</span>
+            <h4>29 &mdash; Qwen3.5 MoE Fine-Tuning</h4>
+            <p>Fine-tune Qwen3.5-35B-A3B (35B total, 3B active) with automatic MoE detection. Expert layers get LoRASwitchLinear, shared experts and dense layers get standard LoRALinear.</p>
+            <div class="code-block-wrapper">
+              <button class="copy-btn">Copy</button>
+              <pre><code class="language-python">from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
+
+model, tokenizer = FastLanguageModel.from_pretrained(
+    "mlx-community/Qwen3.5-35B-A3B-4bit",
+    max_seq_length=2048, load_in_4bit=True,
+)
+
+# Same target_modules — MoE paths resolved automatically
+model = FastLanguageModel.get_peft_model(
+    model, r=8,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+)
+# Prints: "MoE architecture detected — LoRA will target expert layers"
+
+trainer = SFTTrainer(model=model, train_dataset=dataset, tokenizer=tokenizer,
+    args=SFTConfig(output_dir="outputs_moe", max_steps=10))
+trainer.train()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/29_qwen35_moe_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+
+          <div class="example-card">
+            <span class="example-badge">MoE</span>
+            <h4>30 &mdash; Phi-3.5 MoE Fine-Tuning</h4>
+            <p>Fine-tune Microsoft&rsquo;s Phi-3.5-MoE-instruct (42B total, 16 experts, top-2 routing). Demonstrates architecture-agnostic MoE support &mdash; PhiMoE uses <code>block_sparse_moe</code> paths.</p>
+            <div class="code-block-wrapper">
+              <button class="copy-btn">Copy</button>
+              <pre><code class="language-python">from mlx_tune import FastLanguageModel, SFTTrainer, SFTConfig
+
+# Microsoft Phi-3.5-MoE — different MoE structure, same API
+model, tokenizer = FastLanguageModel.from_pretrained(
+    "mlx-community/Phi-3.5-MoE-instruct-4bit",
+    max_seq_length=2048, load_in_4bit=True,
+)
+
+model = FastLanguageModel.get_peft_model(
+    model, r=8,
+    target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"],
+)
+
+trainer = SFTTrainer(model=model, train_dataset=dataset, tokenizer=tokenizer,
+    args=SFTConfig(output_dir="outputs_phi_moe", max_steps=10))
+trainer.train()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/30_phi35_moe_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+      </div>
+
       <footer class="footer">
         <p>Community project, not affiliated with Unsloth AI or Apple.</p>
         <p><a href="https://github.com/ARahim3/mlx-tune">GitHub</a> &middot; <a href="https://pypi.org/project/mlx-tune/">PyPI</a> &middot; Apache 2.0 License</p>
