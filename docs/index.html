@@ -145,7 +145,7 @@
 
       <!-- ===== Hero ===== -->
       <section class="hero hero-glow">
-        <span class="hero-version">v0.4.13</span>
+        <span class="hero-version">v0.4.14</span>
         <img src="assets/img/logo.png" alt="MLX-Tune" class="hero-logo">
         <h1 class="hero-tagline">Fine-tune LLMs, Vision, and Audio models on your Mac</h1>
         <p class="hero-subtitle">SFT, DPO, GRPO, Vision, TTS, and STT fine-tuning &mdash; natively on MLX. Unsloth-compatible API.</p>
@@ -216,6 +216,11 @@
             <div class="feature-icon">&#128269;</div>
             <h3>Embedding Fine-Tuning</h3>
             <p>Sentence embeddings with contrastive learning (InfoNCE). BERT, ModernBERT, Qwen3-Embedding. Semantic search on Apple Silicon.</p>
+          </a>
+          <a href="llm.html#moe" class="feature-card" style="text-decoration:none; color:inherit; cursor:pointer;">
+            <div class="feature-icon">&#9881;</div>
+            <h3>MoE Fine-Tuning</h3>
+            <p>Mixture of Experts training with per-expert LoRA. Qwen3.5-35B-A3B, Phi-3.5-MoE, Mixtral, DeepSeek &mdash; 39+ architectures, same API.</p>
           </a>
           <a href="workflow.html" class="feature-card" style="text-decoration:none; color:inherit; cursor:pointer;">
             <div class="feature-icon">&#8644;</div>
@@ -412,6 +417,11 @@ uv pip install -e .</code></pre>
               <td><strong>Embedding</strong></td>
               <td><code>EmbeddingSFTTrainer</code></td>
               <td>Sentence embedding fine-tuning (BERT, ModernBERT, Qwen3-Embedding — InfoNCE/contrastive)</td>
+            </tr>
+            <tr>
+              <td><strong>MoE</strong></td>
+              <td><code>SFTTrainer</code></td>
+              <td>Mixture of Experts fine-tuning (Qwen3.5-MoE, Phi-3.5-MoE, Mixtral, DeepSeek — 39+ architectures)</td>
             </tr>
           </tbody>
         </table>

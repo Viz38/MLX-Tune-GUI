@@ -5,9 +5,10 @@ This module provides Unsloth-compatible API for loading and configuring language
 using Apple's MLX framework under the hood.
 """
 
-from typing import Optional, Tuple, Union, List, Any, Dict
+from typing import Optional, Tuple, Union, List, Any, Dict, Set
 from pathlib import Path
 import mlx.core as mx
+import mlx.nn as nn
 from mlx_lm import load as mlx_load
 import warnings
 
@@ -22,6 +23,96 @@ except ImportError:
         "Native LoRA application will not work.",
         ImportWarning
     )
+
+# Try to import MoE switch layers for detection
+try:
+    from mlx_lm.models.switch_layers import SwitchLinear, QuantizedSwitchLinear
+    _HAS_SWITCH_LAYERS = True
+except ImportError:
+    _HAS_SWITCH_LAYERS = False
+
+# Try to import LoRA layer types (needed for post-LoRA path resolution)
+try:
+    from mlx_lm.tuner.lora import LoRALinear, LoRASwitchLinear
+    _HAS_LORA_TYPES = True
+except ImportError:
+    _HAS_LORA_TYPES = False
+
+
+def _resolve_target_modules(model: Any, target_modules: List[str]) -> List[str]:
+    """
+    Dynamically resolve short module names to full layer-relative paths
+    by inspecting the actual model structure.
+
+    For dense models: gate_proj → ["mlp.gate_proj"]
+    For MoE models:   gate_proj → ["mlp.switch_mlp.gate_proj", "mlp.shared_expert.gate_proj", ...]
+    For mixed models:  both dense and MoE paths are returned.
+
+    Routers (mlp.gate) are naturally excluded because their name doesn't
+    end with any standard target like "gate_proj".
+
+    Args:
+        model: The MLX model (unwrapped, with .layers attribute).
+        target_modules: Short module names like ["q_proj", "gate_proj"].
+
+    Returns:
+        Deduplicated list of full layer-relative paths.
+    """
+    # Determine convertible types (include LoRA variants for post-application resolution)
+    convertible_types = (nn.Linear, nn.QuantizedLinear)
+    if _HAS_SWITCH_LAYERS:
+        convertible_types = convertible_types + (SwitchLinear, QuantizedSwitchLinear)
+    if _HAS_LORA_TYPES:
+        convertible_types = convertible_types + (LoRALinear, LoRASwitchLinear)
+
+    # Get model layers
+    layers = None
+    if hasattr(model, 'layers'):
+        layers = model.layers
+    elif hasattr(model, 'model') and hasattr(model.model, 'layers'):
+        layers = model.model.layers
+
+    if not layers:
+        # Fallback to static mapping
+        static = {
+            'q_proj': 'self_attn.q_proj', 'k_proj': 'self_attn.k_proj',
+            'v_proj': 'self_attn.v_proj', 'o_proj': 'self_attn.o_proj',
+            'gate_proj': 'mlp.gate_proj', 'up_proj': 'mlp.up_proj',
+            'down_proj': 'mlp.down_proj',
+        }
+        return [static.get(m, m) for m in target_modules]
+
+    # Scan ALL layers to collect convertible module paths (handles mixed architectures)
+    all_paths: Set[str] = set()
+    moe_detected = False
+
+    for layer in layers:
+        for path, module in layer.named_modules():
+            if isinstance(module, convertible_types):
+                all_paths.add(path)
+                if _HAS_SWITCH_LAYERS and isinstance(module, (SwitchLinear, QuantizedSwitchLinear)):
+                    moe_detected = True
+                elif _HAS_LORA_TYPES and isinstance(module, LoRASwitchLinear):
+                    moe_detected = True
+
+    if moe_detected:
+        print("MoE architecture detected — LoRA will target expert layers (SwitchLinear)")
+
+    # Resolve each target: find all paths ending with the target name
+    resolved: Set[str] = set()
+    for module_name in target_modules:
+        if module_name in all_paths:
+            # Exact match (already a full path)
+            resolved.add(module_name)
+        else:
+            matches = [p for p in all_paths if p.endswith('.' + module_name)]
+            if matches:
+                resolved.update(matches)
+            else:
+                # Keep as-is (user may have specified a custom path)
+                resolved.add(module_name)
+
+    return sorted(resolved)
 
 
 class FastLanguageModel:
@@ -464,36 +555,16 @@ class MLXModelWrapper:
             "dropout": self.lora_config.get('lora_dropout', 0.0),
         }
 
-        # Convert target module short names to full paths
-        # Unsloth uses short names like 'q_proj', but mlx_lm needs full paths like 'self_attn.q_proj'
+        # Resolve target module short names to full layer-relative paths.
+        # Uses dynamic inspection to handle both dense and MoE architectures.
+        # IMPORTANT: Must resolve BEFORE linear_to_lora_layers() changes module types
+        # (nn.Linear → LoRALinear, SwitchLinear → LoRASwitchLinear).
         target_modules = self.lora_config.get('target_modules', [])
         if target_modules:
-            # Map short names to full paths based on common LLM architectures
-            short_to_full = {
-                'q_proj': 'self_attn.q_proj',
-                'k_proj': 'self_attn.k_proj',
-                'v_proj': 'self_attn.v_proj',
-                'o_proj': 'self_attn.o_proj',
-                'gate_proj': 'mlp.gate_proj',
-                'up_proj': 'mlp.up_proj',
-                'down_proj': 'mlp.down_proj',
-                # Also support already-full paths
-                'self_attn.q_proj': 'self_attn.q_proj',
-                'self_attn.k_proj': 'self_attn.k_proj',
-                'self_attn.v_proj': 'self_attn.v_proj',
-                'self_attn.o_proj': 'self_attn.o_proj',
-                'mlp.gate_proj': 'mlp.gate_proj',
-                'mlp.up_proj': 'mlp.up_proj',
-                'mlp.down_proj': 'mlp.down_proj',
-            }
-            full_paths = []
-            for module in target_modules:
-                if module in short_to_full:
-                    full_paths.append(short_to_full[module])
-                else:
-                    # Assume it's already a full path or custom module
-                    full_paths.append(module)
+            full_paths = _resolve_target_modules(self.model, target_modules)
             mlx_lora_config["keys"] = full_paths
+            # Cache resolved keys for later use by _save_adapter_config()
+            self._resolved_lora_keys = full_paths
 
         # Check for DoRA
         use_dora = self.lora_config.get('use_dora', False)

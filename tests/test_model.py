@@ -338,3 +338,148 @@ class TestGGUFExportFix:
         model._apply_lora()
 
         assert model._lora_applied is True
+
+
+class TestResolveTargetModules:
+    """Tests for _resolve_target_modules dynamic path resolution."""
+
+    def test_resolve_dense_model(self):
+        """Test that resolution works for standard dense models (backward compat)."""
+        from mlx_tune.model import _resolve_target_modules
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        targets = ["q_proj", "k_proj", "v_proj", "o_proj",
+                    "gate_proj", "up_proj", "down_proj"]
+        resolved = _resolve_target_modules(model.model, targets)
+
+        # Should resolve to standard full paths
+        assert "self_attn.q_proj" in resolved
+        assert "self_attn.k_proj" in resolved
+        assert "self_attn.v_proj" in resolved
+        assert "self_attn.o_proj" in resolved
+        assert "mlp.gate_proj" in resolved
+        assert "mlp.up_proj" in resolved
+        assert "mlp.down_proj" in resolved
+        # Should NOT contain MoE paths
+        assert not any("switch_mlp" in p for p in resolved)
+
+    def test_resolve_full_paths_passthrough(self):
+        """Test that already-full paths are passed through correctly."""
+        from mlx_tune.model import _resolve_target_modules
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        targets = ["self_attn.q_proj", "mlp.gate_proj"]
+        resolved = _resolve_target_modules(model.model, targets)
+
+        assert "self_attn.q_proj" in resolved
+        assert "mlp.gate_proj" in resolved
+
+    def test_resolve_unknown_module_kept(self):
+        """Test that unknown module names are kept as-is."""
+        from mlx_tune.model import _resolve_target_modules
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        targets = ["q_proj", "custom_layer_xyz"]
+        resolved = _resolve_target_modules(model.model, targets)
+
+        assert "self_attn.q_proj" in resolved
+        assert "custom_layer_xyz" in resolved
+
+    def test_resolve_fallback_without_layers(self):
+        """Test fallback to static mapping when model has no .layers."""
+        from mlx_tune.model import _resolve_target_modules
+
+        class NoLayersModel:
+            pass
+
+        targets = ["q_proj", "gate_proj"]
+        resolved = _resolve_target_modules(NoLayersModel(), targets)
+
+        # Should use static fallback
+        assert "self_attn.q_proj" in resolved
+        assert "mlp.gate_proj" in resolved
+
+    def test_resolve_returns_sorted_deduplicated(self):
+        """Test that resolved paths are sorted and deduplicated."""
+        from mlx_tune.model import _resolve_target_modules
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        # Pass duplicates
+        targets = ["q_proj", "q_proj", "v_proj"]
+        resolved = _resolve_target_modules(model.model, targets)
+
+        # Should be deduplicated and sorted
+        assert resolved == sorted(set(resolved))
+
+    def test_dense_lora_application_with_dynamic_resolution(self):
+        """Test that LoRA is correctly applied to a dense model with dynamic resolution."""
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        model = FastLanguageModel.get_peft_model(
+            model, r=8,
+            target_modules=["q_proj", "v_proj"],
+            lora_alpha=16,
+        )
+        model._apply_lora()
+
+        from mlx.utils import tree_flatten
+        trainable = tree_flatten(model.model.trainable_parameters())
+        lora_params = [k for k, _ in trainable if 'lora' in k]
+        assert len(lora_params) > 0
+
+    def test_apply_lora_caches_resolved_keys(self):
+        """Test that _apply_lora() caches resolved keys for adapter config saving."""
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        model = FastLanguageModel.get_peft_model(
+            model, r=8,
+            target_modules=["q_proj", "v_proj", "gate_proj"],
+            lora_alpha=16,
+        )
+        model._apply_lora()
+
+        # Should have cached resolved keys
+        assert hasattr(model, '_resolved_lora_keys')
+        assert "self_attn.q_proj" in model._resolved_lora_keys
+        assert "self_attn.v_proj" in model._resolved_lora_keys
+        assert "mlp.gate_proj" in model._resolved_lora_keys
+
+    def test_resolve_post_lora_application(self):
+        """Test that _resolve_target_modules works even after LoRA is applied."""
+        from mlx_tune.model import _resolve_target_modules
+        model, _ = FastLanguageModel.from_pretrained(
+            model_name="mlx-community/Llama-3.2-1B-Instruct-4bit",
+            max_seq_length=512,
+            load_in_4bit=True,
+        )
+        model = FastLanguageModel.get_peft_model(
+            model, r=8,
+            target_modules=["q_proj", "v_proj"],
+            lora_alpha=16,
+        )
+        model._apply_lora()
+
+        # Resolve AFTER LoRA application — should still find paths via LoRA types
+        targets = ["q_proj", "v_proj", "gate_proj"]
+        resolved = _resolve_target_modules(model.model, targets)
+        assert "self_attn.q_proj" in resolved
+        assert "self_attn.v_proj" in resolved
+        assert "mlp.gate_proj" in resolved
