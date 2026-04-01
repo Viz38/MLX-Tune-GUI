@@ -2,8 +2,8 @@
 Embedding Model Fine-Tuning for MLX-Tune.
 
 Provides Unsloth-compatible API for fine-tuning sentence embedding models
-(BERT, ModernBERT, Qwen3-Embedding, etc.) on Apple Silicon using contrastive
-learning with LoRA.
+(BERT, ModernBERT, Qwen3-Embedding, Harrier, etc.) on Apple Silicon using
+contrastive learning with LoRA.
 
 Uses mlx-embeddings for model loading and MLX for native training.
 """
@@ -17,6 +17,60 @@ import mlx.core as mx
 import mlx.nn as nn
 
 from mlx_embeddings.utils import load as mlx_emb_load
+
+
+def _load_with_relaxed_weights(model_name: str, tokenizer_config: dict = {}) -> Tuple:
+    """Load embedding model with strict=False to handle missing optional weights.
+
+    Some models (e.g., Harrier) don't include dense projection layers that
+    mlx-embeddings model classes expect. This loader tolerates missing weights.
+    """
+    import glob
+    from mlx_embeddings.utils import (
+        get_model_path,
+        load_config,
+        load_tokenizer,
+    )
+    from mlx_embeddings.utils import _get_classes
+
+    model_path = get_model_path(model_name)
+    config = load_config(model_path)
+
+    # Find weight files (same logic as mlx_embeddings.utils.load_model)
+    weight_files = glob.glob(str(model_path / "**/model*.safetensors"), recursive=True)
+    if not weight_files:
+        weight_files = glob.glob(str(model_path / "weight*.safetensors"))
+
+    weights = {}
+    for wf in weight_files:
+        loaded = mx.load(wf)
+        if Path(wf).parent != model_path:
+            folder_name = Path(wf).parent.name
+            weights.update({f"{folder_name}.{k}": v for k, v in loaded.items()})
+        else:
+            weights.update(loaded)
+
+    # Create model instance
+    model_class, model_args_class, text_config, vision_config = _get_classes(config)
+    model_args = model_args_class.from_dict(config)
+    if text_config is not None:
+        model_args.text_config = text_config(**model_args.text_config)
+    if vision_config is not None:
+        model_args.vision_config = vision_config(**model_args.vision_config)
+
+    model = model_class(model_args)
+
+    # Sanitize weights
+    if hasattr(model, "sanitize"):
+        weights = model.sanitize(weights)
+
+    # Load with strict=False — tolerates missing dense projection weights
+    model.load_weights(list(weights.items()), strict=False)
+    mx.eval(model.parameters())
+
+    # Load tokenizer
+    tokenizer = load_tokenizer(model_path, tokenizer_config)
+    return model, tokenizer
 
 
 def _create_lora_linear(
@@ -280,7 +334,7 @@ class EmbeddingModelWrapper:
         if self.pooling_strategy == "cls":
             return last_hidden_state[:, 0, :]
         elif self.pooling_strategy == "last_token":
-            # For decoder-based models (Qwen3-Embedding)
+            # For decoder-based models (Qwen3-Embedding, Harrier, etc.)
             seq_lengths = attention_mask.sum(axis=1).astype(mx.int32) - 1
             batch_size = last_hidden_state.shape[0]
             # Gather last valid token for each sequence
@@ -424,7 +478,7 @@ class FastEmbeddingModel:
     """
     Unsloth-compatible API for loading and fine-tuning embedding models on MLX.
 
-    Supports BERT, XLM-RoBERTa, ModernBERT, Qwen3-Embedding, and other
+    Supports BERT, XLM-RoBERTa, ModernBERT, Qwen3-Embedding, Harrier, and other
     sentence-transformers compatible models.
 
     Example:
@@ -472,17 +526,27 @@ class FastEmbeddingModel:
             tokenizer_config["token"] = token
 
         try:
-            model, tokenizer = mlx_emb_load(
-                model_name,
-                tokenizer_config=tokenizer_config,
-                **kwargs,
-            )
+            try:
+                model, tokenizer = mlx_emb_load(
+                    model_name,
+                    tokenizer_config=tokenizer_config,
+                    **kwargs,
+                )
+            except (ValueError, RuntimeError) as load_err:
+                # Some models (e.g., Harrier) lack optional dense projection
+                # weights that mlx-embeddings model classes define.
+                # Retry with strict=False to tolerate missing weights.
+                if "Missing" in str(load_err) and "dense" in str(load_err):
+                    model, tokenizer = _load_with_relaxed_weights(
+                        model_name, tokenizer_config=tokenizer_config,
+                    )
+                else:
+                    raise
 
             # Try to load config for architecture detection
             config = None
             try:
                 from huggingface_hub import hf_hub_download
-                import os
                 config_path = hf_hub_download(model_name, "config.json")
                 with open(config_path) as f:
                     config = json.load(f)
@@ -507,7 +571,7 @@ class FastEmbeddingModel:
                 f"Tips:\n"
                 f"- Ensure mlx-embeddings is installed: uv pip install mlx-embeddings\n"
                 f"- For pre-converted models, check mlx-community on HuggingFace\n"
-                f"- Supported: BERT, XLM-RoBERTa, ModernBERT, Qwen3-Embedding"
+                f"- Supported: BERT, XLM-RoBERTa, ModernBERT, Qwen3-Embedding, Harrier"
             ) from e
 
     @staticmethod

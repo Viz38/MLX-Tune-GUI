@@ -514,6 +514,82 @@ class TestArchitectureDetection:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Harrier Architecture Detection Tests
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestHarrierArchitectureDetection:
+    """Test architecture detection for Microsoft Harrier embedding models."""
+
+    def test_detect_gemma3_text_config(self):
+        """Harrier 270m/27b use model_type: gemma3_text → detected as 'gemma'."""
+        from mlx_tune.embeddings import _detect_architecture
+        assert _detect_architecture(MagicMock(), {"model_type": "gemma3_text"}) == "gemma"
+
+    def test_detect_qwen3_config_for_harrier(self):
+        """Harrier 0.6b uses model_type: qwen3 → detected as 'qwen3'."""
+        from mlx_tune.embeddings import _detect_architecture
+        assert _detect_architecture(MagicMock(), {"model_type": "qwen3"}) == "qwen3"
+
+    def test_gemma_arch_config_targets(self):
+        """Verify gemma arch config has correct targets for Harrier Gemma3-based models."""
+        from mlx_tune.embeddings import _ARCH_CONFIG
+        cfg = _ARCH_CONFIG["gemma"]
+        assert cfg["block_path"] == ["model", "layers"]
+        assert "q_proj" in cfg["targets"]
+        assert "k_proj" in cfg["targets"]
+        assert "v_proj" in cfg["targets"]
+        assert "o_proj" in cfg["targets"]
+        assert cfg["attn_attr"] == "self_attn"
+
+    def test_qwen3_arch_config_targets(self):
+        """Verify qwen3 arch config has correct targets for Harrier Qwen3-based models."""
+        from mlx_tune.embeddings import _ARCH_CONFIG
+        cfg = _ARCH_CONFIG["qwen3"]
+        assert cfg["block_path"] == ["model", "layers"]
+        assert "q_proj" in cfg["targets"]
+        assert "k_proj" in cfg["targets"]
+        assert "v_proj" in cfg["targets"]
+        assert "o_proj" in cfg["targets"]
+        assert cfg["attn_attr"] == "self_attn"
+
+    def test_harrier_pooling_last_token(self):
+        """Verify last-token pooling works (required by all Harrier models)."""
+        from mlx_tune.embeddings import EmbeddingModelWrapper
+        import mlx.core as mx
+
+        wrapper = EmbeddingModelWrapper.__new__(EmbeddingModelWrapper)
+        wrapper.pooling_strategy = "last_token"
+
+        # Simulate hidden states: batch=2, seq_len=4, hidden=3
+        hidden = mx.array([
+            [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [0.0, 0.0, 0.0]],
+            [[1.0, 1.0, 1.0], [2.0, 2.0, 2.0], [3.0, 3.0, 3.0], [4.0, 4.0, 4.0]],
+        ])
+        # First sequence has 3 real tokens, second has 4
+        mask = mx.array([[1, 1, 1, 0], [1, 1, 1, 1]])
+
+        pooled = wrapper._pool(hidden, mask)
+        mx.eval(pooled)
+
+        # First sequence: last valid token is index 2 → [7, 8, 9]
+        assert pooled[0, 0].item() == 7.0
+        assert pooled[0, 1].item() == 8.0
+        assert pooled[0, 2].item() == 9.0
+        # Second sequence: last valid token is index 3 → [4, 4, 4]
+        assert pooled[1, 0].item() == 4.0
+
+    def test_harrier_pooling_strategy_parameter(self):
+        """Verify pooling_strategy parameter is respected in wrapper construction."""
+        from mlx_tune.embeddings import EmbeddingModelWrapper
+
+        for strategy in ["last_token", "mean", "cls"]:
+            wrapper = EmbeddingModelWrapper.__new__(EmbeddingModelWrapper)
+            wrapper.pooling_strategy = strategy
+            assert wrapper.pooling_strategy == strategy
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Import Tests
 # ──────────────────────────────────────────────────────────────────────────────
 

@@ -78,7 +78,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.14** - MoE fine-tuning (Qwen3.5-35B-A3B, Phi-3.5-MoE, Mixtral); Embedding fine-tuning; Vision GRPO
+> 🚀 **v0.4.15** - Microsoft Harrier embedding support; MoE fine-tuning; Embedding fine-tuning; Vision GRPO
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -100,7 +100,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 | **TTS Fine-Tuning** | ✅ Stable | **Orpheus, OuteTTS, Spark-TTS, Sesame/CSM, Qwen3-TTS** |
 | **STT Fine-Tuning** | ✅ Stable | **Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral** |
 | **`convert()`** | ✅ Stable | **HF → MLX conversion (LLM, TTS, STT)** |
-| **Embedding Fine-Tuning** | ✅ Stable | **BERT, ModernBERT, Qwen3-Embedding (InfoNCE/contrastive)** |
+| **Embedding Fine-Tuning** | ✅ Stable | **BERT, ModernBERT, Qwen3-Embedding, Harrier (InfoNCE/contrastive)** |
 | **`push_to_hub()`** | ✅ Stable | **Upload to HuggingFace Hub** |
 | PyPI Package | ✅ Available | `uv pip install mlx-tune` |
 
@@ -281,7 +281,7 @@ See examples: [Whisper](examples/13_whisper_stt_finetuning.py), [Moonshine](exam
 
 ### Embedding Fine-Tuning
 
-Fine-tune sentence embedding models for semantic search using contrastive learning (InfoNCE loss). Supports BERT, ModernBERT, Qwen3-Embedding, and more:
+Fine-tune sentence embedding models for semantic search using contrastive learning (InfoNCE loss). Supports BERT, ModernBERT, Qwen3-Embedding, Harrier, and more:
 
 ```python
 from mlx_tune import FastEmbeddingModel, EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
@@ -310,7 +310,7 @@ embeddings = model.encode(["Hello world", "Hi there"])
 similarity = (embeddings[0] * embeddings[1]).sum().item()
 ```
 
-See examples: [BERT](examples/27_embedding_finetuning.py), [Qwen3-Embedding](examples/28_qwen3_embedding_finetuning.py).
+See examples: [BERT](examples/27_embedding_finetuning.py), [Qwen3-Embedding](examples/28_qwen3_embedding_finetuning.py), [Harrier-0.6B](examples/31_harrier_0.6b_embedding_finetuning.py), [Harrier-270M](examples/32_harrier_270m_embedding_finetuning.py).
 
 ### MoE Fine-Tuning
 
@@ -371,7 +371,7 @@ model.push_to_hub("username/my-model")
 | **Vision GRPO** | `VLMGRPOTrainer` | ✅ Native MLX | Vision-Language GRPO reasoning |
 | **TTS SFT** | `TTSSFTTrainer` | ✅ Native MLX | Orpheus, OuteTTS, Spark-TTS, Sesame/CSM |
 | **STT SFT** | `STTSFTTrainer` | ✅ Native MLX | Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral |
-| **Embedding** | `EmbeddingSFTTrainer` | ✅ Native MLX | BERT, ModernBERT, Qwen3-Embedding (InfoNCE) |
+| **Embedding** | `EmbeddingSFTTrainer` | ✅ Native MLX | BERT, ModernBERT, Qwen3-Embedding, Harrier (InfoNCE) |
 | **MoE** | `SFTTrainer` | ✅ Native MLX | Qwen3.5-MoE, Phi-3.5-MoE, Mixtral, DeepSeek (39+ archs) |
 
 ## Examples
@@ -384,7 +384,7 @@ Check [`examples/`](examples/) for working code:
 - **RL E2E training** — DPO (21), GRPO (22), ORPO (23), KTO (24), SimPO (25), Vision GRPO (26)
 - TTS fine-tuning — Orpheus-3B (12), OuteTTS (14), Spark-TTS (15), Qwen3-TTS (20)
 - STT fine-tuning — Whisper (13), Moonshine (16), Qwen3-ASR (17), Canary (18), Voxtral (19)
-- Embedding fine-tuning — BERT/MiniLM (27), Qwen3-Embedding (28)
+- Embedding fine-tuning — BERT/MiniLM (27), Qwen3-Embedding (28), Harrier-0.6B (31), Harrier-270M (32)
 - **MoE fine-tuning** — Qwen3.5-35B-A3B (29), Phi-3.5-MoE (30)
 
 ## Requirements

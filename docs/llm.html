@@ -58,6 +58,9 @@
         <li class="sub-item"><a href="#KTOTrainer">KTOTrainer</a></li>
         <li class="sub-item"><a href="#SimPOTrainer">SimPOTrainer</a></li>
         <li><a href="#moe">MoE Fine-Tuning</a></li>
+        <li><a href="#embedding">Embedding Models</a></li>
+        <li class="sub-item"><a href="#FastEmbeddingModel">FastEmbeddingModel</a></li>
+        <li class="sub-item"><a href="#EmbeddingSFTTrainer">EmbeddingSFTTrainer</a></li>
         <li><a href="#chat-templates">Chat Templates</a></li>
         <li><a href="#post-training">Post-Training</a></li>
         <li><a href="#examples">Examples</a></li>
@@ -421,6 +424,137 @@ model.save_pretrained("lora_model")</code></pre>
             <tr><td colspan="3"><em>...and all other MoE architectures supported by mlx-lm (39+ total)</em></td></tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- ===== Embedding Models ===== -->
+      <div class="api-module" id="embedding">
+        <div class="api-module-header">
+          <h2 style="margin:0;">Embedding Models</h2>
+          <span class="module-path">mlx_tune.embeddings</span>
+        </div>
+
+        <p>Fine-tune sentence embedding models for semantic search using contrastive learning (InfoNCE loss). Supports BERT, ModernBERT, Qwen3-Embedding, Microsoft Harrier, and other sentence-transformers compatible architectures.</p>
+
+        <div class="callout">
+          <strong>How it works:</strong> Architecture is auto-detected from <code>config.json</code> model_type. LoRA targets are resolved per architecture:
+          <ul style="margin-top: 0.5rem; margin-bottom: 0;">
+            <li><strong>BERT / XLM-RoBERTa</strong>: <code>attention.self.{query, key, value}</code></li>
+            <li><strong>ModernBERT</strong>: <code>attn.Wqkv</code> (fused QKV)</li>
+            <li><strong>Qwen3 / Gemma3 / Harrier</strong>: <code>self_attn.{q_proj, k_proj, v_proj, o_proj}</code></li>
+          </ul>
+        </div>
+
+        <h3>Supported Models</h3>
+        <table class="api-params">
+          <thead><tr><th>Model</th><th>Architecture</th><th>Pooling</th><th>HuggingFace ID</th></tr></thead>
+          <tbody>
+            <tr><td>all-MiniLM-L6-v2</td><td>BERT</td><td>Mean</td><td><code>mlx-community/all-MiniLM-L6-v2-bf16</code></td></tr>
+            <tr><td>Qwen3-Embedding-0.6B</td><td>Qwen3</td><td>Last Token</td><td><code>mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ</code></td></tr>
+            <tr><td>Harrier 0.6B</td><td>Qwen3</td><td>Last Token</td><td><code>microsoft/harrier-oss-v1-0.6b</code></td></tr>
+            <tr><td>Harrier 270M</td><td>Gemma3</td><td>Last Token</td><td><code>microsoft/harrier-oss-v1-270m</code></td></tr>
+            <tr><td colspan="4"><em>...and other models supported by mlx-embeddings (BERT, XLM-RoBERTa, ModernBERT, etc.)</em></td></tr>
+          </tbody>
+        </table>
+
+        <div class="api-entry" id="FastEmbeddingModel">
+          <h3>FastEmbeddingModel</h3>
+          <div class="api-signature">
+            <span class="api-name">FastEmbeddingModel.from_pretrained</span>(<span class="api-param">model_name</span>, <span class="api-param">max_seq_length</span><span class="api-default">=512</span>, <span class="api-param">pooling_strategy</span><span class="api-default">="mean"</span>, ...) &rarr; <span class="api-param">(EmbeddingModelWrapper, Tokenizer)</span>
+          </div>
+          <p>Load a sentence embedding model. Architecture and LoRA targets are auto-detected.</p>
+          <table class="api-params">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>model_name</code></td><td>str</td><td>HuggingFace model ID or local path</td></tr>
+              <tr><td><code>max_seq_length</code></td><td>int</td><td>Maximum token length (default: 512)</td></tr>
+              <tr><td><code>pooling_strategy</code></td><td>str</td><td><code>"mean"</code>, <code>"cls"</code>, or <code>"last_token"</code> (use <code>"last_token"</code> for decoder-based models)</td></tr>
+              <tr><td><code>load_in_4bit</code></td><td>bool</td><td>Load in 4-bit quantization</td></tr>
+            </tbody>
+          </table>
+
+          <div class="api-signature" style="margin-top: 1.5rem;">
+            <span class="api-name">FastEmbeddingModel.get_peft_model</span>(<span class="api-param">model</span>, <span class="api-param">r</span><span class="api-default">=16</span>, <span class="api-param">lora_alpha</span><span class="api-default">=16</span>, ...) &rarr; <span class="api-param">EmbeddingModelWrapper</span>
+          </div>
+          <p>Apply LoRA adapters. Targets are auto-detected from model architecture.</p>
+          <table class="api-params">
+            <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>r</code></td><td>int</td><td>LoRA rank (default: 16)</td></tr>
+              <tr><td><code>target_modules</code></td><td>list</td><td>Override auto-detected targets (optional)</td></tr>
+              <tr><td><code>lora_alpha</code></td><td>int</td><td>LoRA scaling factor (default: 16)</td></tr>
+              <tr><td><code>lora_dropout</code></td><td>float</td><td>Dropout rate (default: 0.0)</td></tr>
+            </tbody>
+          </table>
+
+          <div class="code-block-wrapper" style="margin-top: 1rem;">
+            <button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastEmbeddingModel
+
+# BERT-based (mean pooling)
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "mlx-community/all-MiniLM-L6-v2-bf16",
+)
+# Decoder-based (last-token pooling)
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "microsoft/harrier-oss-v1-0.6b",
+    pooling_strategy="last_token",
+)
+model = FastEmbeddingModel.get_peft_model(model, r=8, lora_alpha=16)</code></pre>
+          </div>
+        </div>
+
+        <div class="api-entry" id="EmbeddingSFTTrainer">
+          <h3>EmbeddingSFTTrainer</h3>
+          <div class="api-signature">
+            <span class="api-name">EmbeddingSFTTrainer</span>(<span class="api-param">model</span>, <span class="api-param">tokenizer</span>, <span class="api-param">data_collator</span>, <span class="api-param">train_dataset</span>, <span class="api-param">args</span>)
+          </div>
+          <p>Train embedding models with contrastive learning. Supports InfoNCE (in-batch negatives), cosine embedding, and triplet loss.</p>
+          <table class="api-params">
+            <thead><tr><th>Config Parameter</th><th>Default</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>loss_type</code></td><td><code>"infonce"</code></td><td><code>"infonce"</code>, <code>"cosine"</code>, or <code>"triplet"</code></td></tr>
+              <tr><td><code>temperature</code></td><td>0.05</td><td>InfoNCE temperature (lower = sharper)</td></tr>
+              <tr><td><code>per_device_train_batch_size</code></td><td>32</td><td>Batch size (larger = more in-batch negatives)</td></tr>
+              <tr><td><code>learning_rate</code></td><td>2e-5</td><td>Optimizer learning rate</td></tr>
+              <tr><td><code>max_steps</code></td><td>&mdash;</td><td>Total training steps</td></tr>
+              <tr><td><code>max_seq_length</code></td><td>512</td><td>Maximum token length</td></tr>
+              <tr><td><code>normalize_embeddings</code></td><td>True</td><td>L2-normalize embeddings before loss</td></tr>
+            </tbody>
+          </table>
+
+          <div class="code-block-wrapper" style="margin-top: 1rem;">
+            <button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
+
+train_data = [
+    {"anchor": "What is LoRA?", "positive": "Low-rank adaptation for efficient fine-tuning."},
+    # ...
+]
+
+trainer = EmbeddingSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=EmbeddingDataCollator(model, tokenizer),
+    train_dataset=train_data,
+    args=EmbeddingSFTConfig(
+        loss_type="infonce", temperature=0.05,
+        per_device_train_batch_size=10, max_steps=30,
+    ),
+)
+trainer.train()
+
+# Encode and compare
+embeddings = model.encode(["query text", "document text"])
+similarity = (embeddings[0] * embeddings[1]).sum().item()</code></pre>
+          </div>
+        </div>
+
+        <h3 id="embedding-examples">Examples</h3>
+        <ul>
+          <li><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/27_embedding_finetuning.py" target="_blank">Example 27</a> &mdash; BERT/MiniLM embedding fine-tuning</li>
+          <li><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/28_qwen3_embedding_finetuning.py" target="_blank">Example 28</a> &mdash; Qwen3-Embedding fine-tuning (4-bit)</li>
+          <li><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/31_harrier_0.6b_embedding_finetuning.py" target="_blank">Example 31</a> &mdash; Microsoft Harrier 0.6B (cross-lingual search)</li>
+          <li><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/32_harrier_270m_embedding_finetuning.py" target="_blank">Example 32</a> &mdash; Microsoft Harrier 270M (code/doc search)</li>
+        </ul>
       </div>
 
       <!-- ===== Chat Templates ===== -->
