@@ -473,7 +473,7 @@ trainer.train()</code></pre>
           <p>Fine-tune Orpheus-3B for text-to-speech with SNAC audio codec and LoRA.</p>
           <div class="example-tags"><span class="example-tag">FastTTSModel</span><span class="example-tag">TTS</span><span class="example-tag">SNAC</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastTTSModel, TTSSFTTrainer, TTSSFTConfig, TTSDataCollator
 from datasets import load_dataset, Audio
@@ -509,7 +509,7 @@ sf.write("output.wav", audio, 24000)</code></pre>
           <p>Fine-tune Whisper for speech-to-text with encoder-decoder LoRA on Apple Silicon.</p>
           <div class="example-tags"><span class="example-tag">FastSTTModel</span><span class="example-tag">STT</span><span class="example-tag">Whisper</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastSTTModel, STTSFTTrainer, STTSFTConfig, STTDataCollator
 from datasets import load_dataset, Audio
@@ -546,7 +546,7 @@ print(result)</code></pre>
           <p>Fine-tune OuteTTS-1B (Llama + DAC codec) for voice cloning with text-based audio tokens.</p>
           <div class="example-tags"><span class="example-tag">FastTTSModel</span><span class="example-tag">TTS</span><span class="example-tag">DAC</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastTTSModel, TTSSFTTrainer, TTSSFTConfig, TTSDataCollator
 from datasets import load_dataset, Audio
@@ -576,7 +576,7 @@ trainer.train()</code></pre>
           <p>Fine-tune Spark-TTS (0.5B, Qwen2 + BiCodec) &mdash; ultra-light TTS for Apple Silicon.</p>
           <div class="example-tags"><span class="example-tag">FastTTSModel</span><span class="example-tag">TTS</span><span class="example-tag">BiCodec</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastTTSModel, TTSSFTTrainer, TTSSFTConfig, TTSDataCollator
 from datasets import load_dataset, Audio
@@ -607,7 +607,7 @@ trainer.train()</code></pre>
           <p>Fine-tune Alibaba's Qwen3-TTS (1.7B) for multilingual text-to-speech. Dual-embedding architecture with 16-codebook built-in speech tokenizer.</p>
           <div class="example-tags"><span class="example-tag">FastTTSModel</span><span class="example-tag">TTS</span><span class="example-tag">Qwen3-TTS</span><span class="example-tag">Multilingual</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastTTSModel, TTSSFTTrainer, TTSSFTConfig, TTSDataCollator
 from datasets import load_dataset, Audio
@@ -642,7 +642,7 @@ trainer.train()</code></pre>
           <p>Fine-tune Moonshine for speech-to-text with raw conv frontend (no mel spectrogram).</p>
           <div class="example-tags"><span class="example-tag">FastSTTModel</span><span class="example-tag">STT</span><span class="example-tag">Moonshine</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastSTTModel, STTSFTTrainer, STTSFTConfig, STTDataCollator
 from datasets import load_dataset, Audio
@@ -678,7 +678,7 @@ trainer.train()</code></pre>
           <p>Fine-tune Alibaba's Qwen3-ASR (audio-LLM) for multilingual speech recognition. Audio features are injected into a Qwen3 language model.</p>
           <div class="example-tags"><span class="example-tag">FastSTTModel</span><span class="example-tag">STT</span><span class="example-tag">Qwen3-ASR</span><span class="example-tag">Audio-LLM</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastSTTModel, STTSFTTrainer, STTSFTConfig, STTDataCollator
 
@@ -714,7 +714,7 @@ trainer.train()</code></pre>
           <p>Fine-tune NVIDIA Canary for multilingual ASR. FastConformer encoder with Transformer decoder, supports 25+ languages and translation.</p>
           <div class="example-tags"><span class="example-tag">FastSTTModel</span><span class="example-tag">STT</span><span class="example-tag">Canary</span><span class="example-tag">NVIDIA</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastSTTModel, STTSFTTrainer, STTSFTConfig, STTDataCollator
 
@@ -750,7 +750,7 @@ trainer.train()</code></pre>
           <p>Fine-tune Mistral's Voxtral Mini (3B audio-LLM). Combines an audio encoder with a Llama decoder for speech recognition.</p>
           <div class="example-tags"><span class="example-tag">FastSTTModel</span><span class="example-tag">STT</span><span class="example-tag">Voxtral</span><span class="example-tag">Audio-LLM</span></div>
           <button class="example-toggle">View Code</button>
-          <div class="example-code" style="display:none;">
+          <div class="example-code">
             <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python">from mlx_tune import FastSTTModel, STTSFTTrainer, STTSFTConfig, STTDataCollator
 
@@ -850,6 +850,71 @@ model.save_pretrained("./adapter")
 model2.load_adapter("./adapter")  # On fresh model with LoRA applied</code></pre>
             </div>
             <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/28_qwen3_embedding_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>31 &mdash; Harrier 0.6B Embedding Fine-Tuning</h4>
+          <p>Fine-tune Microsoft Harrier 0.6B for cross-lingual semantic search. Multilingual embedding model supporting 94 languages with last-token pooling. Includes adapter save/load verification.</p>
+          <div class="example-tags"><span class="example-tag">Embedding</span><span class="example-tag">Harrier</span><span class="example-tag">Multilingual</span><span class="example-tag">BF16</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastEmbeddingModel, EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
+
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "microsoft/harrier-oss-v1-0.6b",
+    pooling_strategy="last_token",  # Harrier uses last-token pooling
+)
+model = FastEmbeddingModel.get_peft_model(model, r=8, lora_alpha=16)
+# Auto-detected targets: q_proj, k_proj, v_proj, o_proj
+
+trainer = EmbeddingSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=EmbeddingDataCollator(model, tokenizer),
+    train_dataset=train_data,  # Cross-lingual query-passage pairs
+    args=EmbeddingSFTConfig(loss_type="infonce", temperature=0.05, max_steps=30),
+)
+trainer.train()
+
+# Save and reload adapter
+model.save_pretrained("./adapter")
+model2.load_adapter("./adapter")  # On fresh model with LoRA applied</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/31_harrier_0.6b_embedding_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>32 &mdash; Harrier 270M Embedding Fine-Tuning</h4>
+          <p>Fine-tune Microsoft Harrier 270M for code/documentation search. Lightweight model (~540MB) ideal for fast iteration on Apple Silicon. Includes adapter save/load verification.</p>
+          <div class="example-tags"><span class="example-tag">Embedding</span><span class="example-tag">Harrier</span><span class="example-tag">Lightweight</span><span class="example-tag">Save/Load</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastEmbeddingModel, EmbeddingSFTTrainer, EmbeddingSFTConfig, EmbeddingDataCollator
+
+model, tokenizer = FastEmbeddingModel.from_pretrained(
+    "microsoft/harrier-oss-v1-270m",
+    pooling_strategy="last_token",  # Harrier uses last-token pooling
+    max_seq_length=256,
+)
+model = FastEmbeddingModel.get_peft_model(model, r=8, lora_alpha=16)
+# Auto-detected targets: q_proj, k_proj, v_proj, o_proj
+
+trainer = EmbeddingSFTTrainer(
+    model=model, tokenizer=tokenizer,
+    data_collator=EmbeddingDataCollator(model, tokenizer, max_seq_length=256),
+    train_dataset=train_data,  # Code/documentation Q&A pairs
+    args=EmbeddingSFTConfig(loss_type="infonce", temperature=0.05, max_steps=30, max_seq_length=256),
+)
+trainer.train()
+
+# Save and reload adapter
+model.save_pretrained("./adapter")
+model2.load_adapter("./adapter")  # On fresh model with LoRA applied</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/32_harrier_270m_embedding_finetuning.py" target="_blank">Full source &rarr;</a></p>
           </div>
         </div>
       </div>
