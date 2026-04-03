@@ -587,23 +587,24 @@ class DPOTrainer:
         loss_and_grad = nn.value_and_grad(actual_model, loss_fn)
 
         total_loss = 0.0
+        bs = max(1, self.batch_size)
         for step in range(self.iters):
-            # Get batch
-            batch_idx = step % len(tokenized_data)
-            sample = tokenized_data[batch_idx]
+            # Gather batch of samples
+            batch_samples = [
+                tokenized_data[(step * bs + i) % len(tokenized_data)]
+                for i in range(bs)
+            ]
 
-            # Pad sequences
-            max_len = max(sample['chosen_length'], sample['rejected_length'])
+            # Pad all sequences to common max length within batch
+            max_len = max(
+                max(s['chosen_length'], s['rejected_length']) for s in batch_samples
+            )
             pad_id = self.tokenizer.pad_token_id or 0
 
-            chosen_padded = self._pad_to_length(sample['chosen_ids'], max_len, pad_id)
-            rejected_padded = self._pad_to_length(sample['rejected_ids'], max_len, pad_id)
-
-            # Create batch tensors
-            chosen_ids = mx.array([chosen_padded])
-            rejected_ids = mx.array([rejected_padded])
-            chosen_lengths = mx.array([sample['chosen_length']])
-            rejected_lengths = mx.array([sample['rejected_length']])
+            chosen_ids = mx.array([self._pad_to_length(s['chosen_ids'], max_len, pad_id) for s in batch_samples])
+            rejected_ids = mx.array([self._pad_to_length(s['rejected_ids'], max_len, pad_id) for s in batch_samples])
+            chosen_lengths = mx.array([s['chosen_length'] for s in batch_samples])
+            rejected_lengths = mx.array([s['rejected_length'] for s in batch_samples])
 
             batch_data = (chosen_ids, rejected_ids, chosen_lengths, rejected_lengths)
 
@@ -617,7 +618,7 @@ class DPOTrainer:
             # Logging
             if (step + 1) % self.logging_steps == 0:
                 avg_loss = total_loss / self.logging_steps
-                print(f"  Step {step + 1}/{self.iters} | Loss: {avg_loss:.4f}")
+                print(f"  Step {step + 1}/{self.iters} | Loss: {avg_loss:.4f} | batch_size: {bs}")
                 total_loss = 0.0
 
             # Save checkpoint
@@ -818,17 +819,23 @@ class ORPOTrainer:
         loss_and_grad = nn.value_and_grad(actual_model, loss_fn)
 
         total_loss = 0.0
+        bs = max(1, self.batch_size)
         for step in range(self.iters):
-            batch_idx = step % len(tokenized_data)
-            sample = tokenized_data[batch_idx]
+            # Gather batch of samples
+            batch_samples = [
+                tokenized_data[(step * bs + i) % len(tokenized_data)]
+                for i in range(bs)
+            ]
 
-            max_len = max(sample['chosen_length'], sample['rejected_length'])
+            max_len = max(
+                max(s['chosen_length'], s['rejected_length']) for s in batch_samples
+            )
             pad_id = self.tokenizer.pad_token_id or 0
 
-            chosen_ids = mx.array([self._pad_to_length(sample['chosen_ids'], max_len, pad_id)])
-            rejected_ids = mx.array([self._pad_to_length(sample['rejected_ids'], max_len, pad_id)])
-            chosen_lengths = mx.array([sample['chosen_length']])
-            rejected_lengths = mx.array([sample['rejected_length']])
+            chosen_ids = mx.array([self._pad_to_length(s['chosen_ids'], max_len, pad_id) for s in batch_samples])
+            rejected_ids = mx.array([self._pad_to_length(s['rejected_ids'], max_len, pad_id) for s in batch_samples])
+            chosen_lengths = mx.array([s['chosen_length'] for s in batch_samples])
+            rejected_lengths = mx.array([s['rejected_length'] for s in batch_samples])
 
             loss, grads = loss_and_grad(actual_model, (chosen_ids, rejected_ids, chosen_lengths, rejected_lengths))
             optimizer.update(actual_model, grads)
@@ -837,7 +844,7 @@ class ORPOTrainer:
             total_loss += loss.item()
 
             if (step + 1) % self.logging_steps == 0:
-                print(f"  Step {step + 1}/{self.iters} | Loss: {total_loss / self.logging_steps:.4f}")
+                print(f"  Step {step + 1}/{self.iters} | Loss: {total_loss / self.logging_steps:.4f} | batch_size: {bs}")
                 total_loss = 0.0
 
         # Save adapters and config
@@ -1015,18 +1022,12 @@ class GRPOTrainer:
 
         # Define policy gradient loss function for nn.value_and_grad
         def pg_loss_fn(model, sequences, seq_lengths, advantages):
-            """Compute policy gradient loss on pre-generated completions."""
-            # Forward pass to get log probs for all completions
-            total_loss = mx.array(0.0)
-            for i in range(sequences.shape[0]):
-                seq = sequences[i:i+1]  # [1, seq_len]
-                length = seq_lengths[i:i+1]  # [1]
-                adv = advantages[i]
-
-                log_prob = compute_log_probs_with_lengths(model, seq, length)
-                total_loss = total_loss - adv * log_prob[0]
-
-            return total_loss / sequences.shape[0]
+            """Compute policy gradient loss on pre-generated completions (batched)."""
+            # Batched forward pass for all generations at once
+            log_probs = compute_log_probs_with_lengths(model, sequences, seq_lengths)  # [N]
+            # Policy gradient: -advantage * log_prob, averaged over generations
+            losses = -advantages * log_probs
+            return mx.mean(losses)
 
         loss_and_grad = nn.value_and_grad(actual_model, pg_loss_fn)
 
@@ -1206,12 +1207,13 @@ class KTOTrainer:
         self.max_seq_length = args.max_seq_length
         self.logging_steps = args.logging_steps
         self.save_steps = args.save_steps
+        self.batch_size = args.per_device_train_batch_size
 
         if args.max_steps > 0:
             self.iters = args.max_steps
         else:
             dataset_size = len(train_dataset) if hasattr(train_dataset, '__len__') else 100
-            self.iters = max(1, dataset_size * args.num_train_epochs)
+            self.iters = max(1, (dataset_size // max(1, self.batch_size)) * args.num_train_epochs)
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.adapter_path = self.output_dir / "adapters"
@@ -1278,16 +1280,19 @@ class KTOTrainer:
         loss_and_grad = nn.value_and_grad(actual_model, loss_fn)
 
         total_loss = 0.0
+        bs = max(1, self.batch_size)
         for step in range(self.iters):
-            sample = tokenized_data[step % len(tokenized_data)]
+            # Gather batch of samples
+            batch_samples = [
+                tokenized_data[(step * bs + i) % len(tokenized_data)]
+                for i in range(bs)
+            ]
             pad_id = self.tokenizer.pad_token_id or 0
 
-            max_len = sample['length']
-            ids_padded = sample['ids'] + [pad_id] * (max_len - len(sample['ids']))
-
-            input_ids = mx.array([ids_padded])
-            lengths = mx.array([sample['length']])
-            labels = mx.array([sample['label']])
+            max_len = max(s['length'] for s in batch_samples)
+            input_ids = mx.array([s['ids'] + [pad_id] * (max_len - len(s['ids'])) for s in batch_samples])
+            lengths = mx.array([s['length'] for s in batch_samples])
+            labels = mx.array([s['label'] for s in batch_samples])
 
             loss, grads = loss_and_grad(actual_model, (input_ids, lengths, labels))
             optimizer.update(actual_model, grads)
@@ -1296,7 +1301,7 @@ class KTOTrainer:
             total_loss += loss.item()
 
             if (step + 1) % self.logging_steps == 0:
-                print(f"  Step {step + 1}/{self.iters} | Loss: {total_loss / self.logging_steps:.4f}")
+                print(f"  Step {step + 1}/{self.iters} | Loss: {total_loss / self.logging_steps:.4f} | batch_size: {bs}")
                 total_loss = 0.0
 
             if (step + 1) % self.save_steps == 0:
@@ -1357,12 +1362,13 @@ class SimPOTrainer:
         self.max_seq_length = args.max_seq_length
         self.logging_steps = args.logging_steps
         self.save_steps = args.save_steps
+        self.batch_size = args.per_device_train_batch_size
 
         if args.max_steps > 0:
             self.iters = args.max_steps
         else:
             dataset_size = len(train_dataset) if hasattr(train_dataset, '__len__') else 100
-            self.iters = max(1, dataset_size * args.num_train_epochs)
+            self.iters = max(1, (dataset_size // max(1, self.batch_size)) * args.num_train_epochs)
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.adapter_path = self.output_dir / "adapters"
@@ -1433,15 +1439,22 @@ class SimPOTrainer:
         loss_and_grad = nn.value_and_grad(actual_model, loss_fn)
 
         total_loss = 0.0
+        bs = max(1, self.batch_size)
         for step in range(self.iters):
-            sample = tokenized_data[step % len(tokenized_data)]
-            max_len = max(sample['chosen_length'], sample['rejected_length'])
+            # Gather batch of samples
+            batch_samples = [
+                tokenized_data[(step * bs + i) % len(tokenized_data)]
+                for i in range(bs)
+            ]
+            max_len = max(
+                max(s['chosen_length'], s['rejected_length']) for s in batch_samples
+            )
             pad_id = self.tokenizer.pad_token_id or 0
 
-            chosen_ids = mx.array([self._pad(sample['chosen_ids'], max_len, pad_id)])
-            rejected_ids = mx.array([self._pad(sample['rejected_ids'], max_len, pad_id)])
-            chosen_lengths = mx.array([sample['chosen_length']])
-            rejected_lengths = mx.array([sample['rejected_length']])
+            chosen_ids = mx.array([self._pad(s['chosen_ids'], max_len, pad_id) for s in batch_samples])
+            rejected_ids = mx.array([self._pad(s['rejected_ids'], max_len, pad_id) for s in batch_samples])
+            chosen_lengths = mx.array([s['chosen_length'] for s in batch_samples])
+            rejected_lengths = mx.array([s['rejected_length'] for s in batch_samples])
 
             loss, grads = loss_and_grad(actual_model, (chosen_ids, rejected_ids, chosen_lengths, rejected_lengths))
             optimizer.update(actual_model, grads)
@@ -1450,7 +1463,7 @@ class SimPOTrainer:
             total_loss += loss.item()
 
             if (step + 1) % self.logging_steps == 0:
-                print(f"  Step {step + 1}/{self.iters} | Loss: {total_loss / self.logging_steps:.4f}")
+                print(f"  Step {step + 1}/{self.iters} | Loss: {total_loss / self.logging_steps:.4f} | batch_size: {bs}")
                 total_loss = 0.0
 
         # Save adapters and config

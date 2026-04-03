@@ -17,7 +17,7 @@ Supported Training Methods:
 - OCR (Optical Character Recognition) fine-tuning
 """
 
-__version__ = "0.4.16"  # OCR fine-tuning support
+__version__ = "0.4.17"  # Batched RL training
 
 from mlx_tune.model import FastLanguageModel
 from mlx_tune.trainer import (
