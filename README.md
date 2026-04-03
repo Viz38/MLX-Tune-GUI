@@ -73,7 +73,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.16** - OCR fine-tuning (DeepSeek-OCR, GLM-OCR, Qwen-VL + CER/WER metrics); Harrier embeddings; MoE fine-tuning
+> 🚀 **v0.4.17** - Batched RL training; OCR fine-tuning (DeepSeek-OCR, GLM-OCR, Qwen-VL + CER/WER metrics)
 
 | Feature | Status | Notes |
 |---------|--------|-------|
