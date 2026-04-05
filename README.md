@@ -78,7 +78,7 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 
 ## Project Status
 
-> 🚀 **v0.4.17** - Batched RL training; OCR fine-tuning (DeepSeek-OCR, GLM-OCR, Qwen-VL + CER/WER metrics)
+> 🚀 **v0.4.18** - Gemma 4 support (E2B, E4B, 26B MoE, 31B); Batched RL training; OCR fine-tuning
 
 | Feature | Status | Notes |
 |---------|--------|-------|
@@ -90,13 +90,13 @@ Local Mac (MLX-Tune)       →     Cloud GPU (Unsloth)
 | GRPO Training | ✅ Stable | **Multi-generation + reward** |
 | KTO Training | ✅ Stable | **Binary feedback + KTOConfig** |
 | SimPO Training | ✅ Stable | **No ref model + SimPOConfig** |
-| Chat Templates | ✅ Stable | 15 models (llama, gemma, qwen, phi, mistral) |
+| Chat Templates | ✅ Stable | 16 models (llama, gemma, qwen, phi, mistral) |
 | Response-Only Training | ✅ Stable | `train_on_responses_only()` |
 | Multi-turn Merging | ✅ Stable | `to_sharegpt()` + `conversation_extension` |
 | Column Mapping | ✅ Stable | `apply_column_mapping()` auto-rename |
 | Dataset Config | ✅ Stable | `HFDatasetConfig` structured loading |
-| Vision Models | ✅ Stable | Full VLM fine-tuning via mlx-vlm |
-| **MoE Fine-Tuning** | ✅ Stable | **Qwen3.5-35B-A3B, Phi-3.5-MoE, Mixtral, DeepSeek, 39+ architectures** |
+| Vision Models | ✅ Stable | Full VLM fine-tuning via mlx-vlm (**Gemma 4**, Qwen3.5, PaliGemma, LLaVA, Pixtral) |
+| **MoE Fine-Tuning** | ✅ Stable | **Gemma 4 26B-A4B, Qwen3.5-35B-A3B, Phi-3.5-MoE, Mixtral, DeepSeek, 39+ architectures** |
 | **TTS Fine-Tuning** | ✅ Stable | **Orpheus, OuteTTS, Spark-TTS, Sesame/CSM, Qwen3-TTS** |
 | **STT Fine-Tuning** | ✅ Stable | **Whisper, Moonshine, Qwen3-ASR, Canary, Voxtral** |
 | **`convert()`** | ✅ Stable | **HF → MLX conversion (LLM, TTS, STT)** |
@@ -193,7 +193,7 @@ trainer = train_on_responses_only(
 
 ### Vision Model Fine-Tuning (NEW!)
 
-Fine-tune vision-language models like Qwen3.5 on image+text tasks:
+Fine-tune vision-language models like Gemma 4, Qwen3.5 on image+text tasks:
 
 ```python
 from mlx_tune import FastVisionModel, UnslothVisionDataCollator, VLMSFTTrainer
@@ -224,7 +224,7 @@ trainer = VLMSFTTrainer(
 trainer.train()
 ```
 
-See [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for the full workflow, [`examples/11_qwen35_text_finetuning.py`](examples/11_qwen35_text_finetuning.py) for text-only fine-tuning, or [`examples/26_vision_grpo_training.py`](examples/26_vision_grpo_training.py) for Vision GRPO reasoning.
+See [`examples/38_gemma4_vision_finetuning.py`](examples/38_gemma4_vision_finetuning.py) for Gemma 4 vision fine-tuning, [`examples/39_gemma4_text_to_sql.py`](examples/39_gemma4_text_to_sql.py) for text-only fine-tuning through the VLM path, [`examples/10_qwen35_vision_finetuning.py`](examples/10_qwen35_vision_finetuning.py) for Qwen3.5, or [`examples/26_vision_grpo_training.py`](examples/26_vision_grpo_training.py) for Vision GRPO reasoning.
 
 ### TTS Fine-Tuning
 
