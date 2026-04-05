@@ -75,6 +75,7 @@ adapters/
 fused_model/
 qwen_lora/
 qwen35_text_lora/
+*_lora/
 *_output/
 *_outputs/
 *_adapters/

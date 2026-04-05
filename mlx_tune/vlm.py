@@ -2,6 +2,7 @@
 Vision Language Model (VLM) Support for MLX-Tune
 
 Provides Unsloth-compatible API for Vision-Language models using mlx-vlm:
+- Gemma 4 (E2B, E4B, 26B MoE, 31B Dense)
 - Qwen3.5 (natively multimodal)
 - Qwen2-VL / Qwen3-VL
 - LLaVA 1.5 / 1.6
@@ -1111,23 +1112,26 @@ class VLMSFTTrainer:
         optimizer = optim.Adam(learning_rate=self.learning_rate)
 
         # Auto-detect assistant token ID for response-only training
-        assistant_id = 77091  # default fallback
-        if self.processor is not None:
+        assistant_id = None
+        if self.train_on_completions and self.processor is not None:
             tokenizer = getattr(self.processor, "tokenizer", self.processor)
             if hasattr(tokenizer, "encode"):
-                ids = tokenizer.encode("assistant", add_special_tokens=False)
-                if ids:
-                    assistant_id = ids[0]
+                # Try "model" first (Gemma uses <|turn>model), then "assistant"
+                for role_name in ["model", "assistant"]:
+                    ids = tokenizer.encode(role_name, add_special_tokens=False)
+                    if ids:
+                        assistant_id = ids[0]
+                        break
+                if assistant_id is None:
+                    assistant_id = 77091  # fallback
 
         # Set up training internals
-        # train_on_completions=True trains only on assistant response tokens
-        # (matches Unsloth/TRL SFTTrainer behavior)
         if _MLX_VLM_LEGACY and VLMTrainerInternal is not None:
             # mlx-vlm <0.4.0: use Trainer class
             trainer = VLMTrainerInternal(
                 self.actual_model,
                 optimizer,
-                train_on_completions=True,
+                train_on_completions=self.train_on_completions,
                 assistant_id=assistant_id,
             )
         else:
@@ -1135,7 +1139,7 @@ class VLMSFTTrainer:
             trainer = _VLMTrainerShim(
                 self.actual_model,
                 optimizer,
-                train_on_completions=True,
+                train_on_completions=self.train_on_completions,
                 assistant_id=assistant_id,
             )
 

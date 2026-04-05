@@ -233,6 +233,13 @@ class FastLanguageModel:
             return wrapped_model, tokenizer
 
         except Exception as e:
+            model_lower = model_name.lower()
+            if 'gemma-4' in model_lower or 'gemma4' in model_lower:
+                raise RuntimeError(
+                    f"Gemma 4 models are multimodal (VLM). Use FastVisionModel instead:\n\n"
+                    f"  from mlx_tune import FastVisionModel\n"
+                    f"  model, processor = FastVisionModel.from_pretrained(\"{model_name}\")\n"
+                ) from e
             raise RuntimeError(
                 f"Failed to load model '{model_name}'. "
                 f"Error: {str(e)}\n\n"

@@ -327,7 +327,7 @@ class TestChatTemplateRegistry:
         required_templates = [
             "llama-3", "llama-3.1",
             "chatml",
-            "gemma-2", "gemma-3",
+            "gemma-2", "gemma-3", "gemma-4",
             "qwen-2.5", "qwen-3",
             "phi-3", "phi-3.5", "phi-4",
             "mistral", "mistral-nemo",
@@ -411,6 +411,12 @@ class TestGetTemplateForModel:
         """Test detection of Gemma models."""
         assert get_template_for_model("google/gemma-2-9b-it") == "gemma-2"
         assert get_template_for_model("google/gemma-3-27b-it") == "gemma-3"
+        # Gemma 4 — all 4 variants
+        assert get_template_for_model("google/gemma-4-E2B-it") == "gemma-4"
+        assert get_template_for_model("google/gemma-4-E4B-it") == "gemma-4"
+        assert get_template_for_model("google/gemma-4-27b-it") == "gemma-4"
+        assert get_template_for_model("google/gemma-4-31b-it") == "gemma-4"
+        assert get_template_for_model("mlx-community/gemma-4-4b-it-4bit") == "gemma-4"
 
     def test_detect_qwen(self):
         """Test detection of Qwen models."""
@@ -633,6 +639,17 @@ class TestGetTemplateParts:
         parts = _get_template_parts("gemma-2")
         assert parts["instruction_part"] == "<start_of_turn>user\n"
         assert parts["response_part"] == "<start_of_turn>model\n"
+
+    def test_gemma4_parts(self):
+        """Test gemma-4 template parts (same format as gemma-2/3)."""
+        parts = _get_template_parts("gemma-4")
+        assert parts["instruction_part"] == "<start_of_turn>user\n"
+        assert parts["response_part"] == "<start_of_turn>model\n"
+
+    def test_gemma4_alias(self):
+        """Test gemma4 alias resolves to gemma-4."""
+        from mlx_tune.chat_templates import TEMPLATE_ALIASES
+        assert TEMPLATE_ALIASES.get("gemma4") == "gemma-4"
 
     def test_phi4_parts(self):
         """Test phi-4 template parts (uses im_sep)."""
