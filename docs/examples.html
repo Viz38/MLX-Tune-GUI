@@ -30,12 +30,39 @@
         <li><a href="troubleshooting.html">Troubleshooting</a></li>
       </ul>
       <div class="nav-right">
+        <button class="search-trigger" aria-label="Search docs">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><path d="M10.5 10.5L15 15"/></svg>
+          Search
+          <kbd>⌘K</kbd>
+        </button>
         <a href="https://github.com/ARahim3/mlx-tune" class="github-link" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" fill="currentColor"/></svg></a>
         <button class="theme-toggle" aria-label="Toggle theme"></button>
         <button class="mobile-toggle" aria-label="Menu">&#9776;</button>
       </div>
     </div>
   </nav>
+
+  <!-- Search Modal -->
+  <div class="search-overlay" role="dialog" aria-label="Search documentation">
+    <div class="search-modal">
+      <div class="search-input-wrap">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="5"/><path d="M10.5 10.5L15 15"/></svg>
+        <input type="text" class="search-input" placeholder="Search docs..." autocomplete="off" spellcheck="false">
+        <span class="search-esc">esc</span>
+      </div>
+      <div class="search-results"></div>
+      <div class="search-footer">
+        <span class="search-footer-item"><kbd>&uarr;</kbd><kbd>&darr;</kbd> navigate</span>
+        <span class="search-footer-item"><kbd>&crarr;</kbd> open</span>
+        <span class="search-footer-item"><kbd>esc</kbd> close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Back to Top -->
+  <button class="back-to-top" aria-label="Back to top">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 13V3M3 7l5-5 5 5"/></svg>
+  </button>
 
   <div class="page-wrapper">
     <aside class="sidebar">
@@ -462,6 +489,92 @@ trainer = VLMGRPOTrainer(
 trainer.train()</code></pre>
             </div>
             <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/26_vision_grpo_training.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>38 &mdash; Gemma 4 Vision Fine-Tuning</h4>
+          <p>Fine-tune Google Gemma 4 E4B on LaTeX OCR. All Gemma 4 models are VLMs &mdash; use FastVisionModel.</p>
+          <div class="example-tags"><span class="example-tag">VLM</span><span class="example-tag">Gemma 4</span><span class="example-tag">Vision</span><span class="example-tag">OCR</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastVisionModel, UnslothVisionDataCollator, VLMSFTTrainer
+from mlx_tune.vlm import VLMSFTConfig
+
+model, processor = FastVisionModel.from_pretrained(
+    "mlx-community/gemma-4-e4b-it-4bit",
+)
+model = FastVisionModel.get_peft_model(
+    model, finetune_vision_layers=True,
+    finetune_language_layers=True, r=16, lora_alpha=16,
+)
+trainer = VLMSFTTrainer(
+    model=model, tokenizer=processor,
+    data_collator=UnslothVisionDataCollator(model, processor),
+    train_dataset=dataset,
+    args=VLMSFTConfig(max_steps=30, learning_rate=2e-4),
+)
+trainer.train()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/38_gemma4_vision_finetuning.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>39 &mdash; Gemma 4 Text-to-SQL</h4>
+          <p>Text-only fine-tuning through the VLM path. Uses Google&rsquo;s official Gemma 4 example dataset.</p>
+          <div class="example-tags"><span class="example-tag">VLM</span><span class="example-tag">Gemma 4</span><span class="example-tag">Text-to-SQL</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastVisionModel, UnslothVisionDataCollator, VLMSFTTrainer
+
+model, processor = FastVisionModel.from_pretrained(
+    "mlx-community/gemma-4-e4b-it-4bit",
+)
+model = FastVisionModel.get_peft_model(
+    model, finetune_vision_layers=False,
+    finetune_language_layers=True, r=16, lora_alpha=16,
+)
+# Text-only fine-tuning (no images needed)
+trainer = VLMSFTTrainer(
+    model=model, tokenizer=processor,
+    data_collator=UnslothVisionDataCollator(model, processor),
+    train_dataset=sql_dataset,
+    args=VLMSFTConfig(max_steps=30, learning_rate=2e-4),
+)
+trainer.train()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/39_gemma4_text_to_sql.py" target="_blank">Full source &rarr;</a></p>
+          </div>
+        </div>
+
+        <div class="example-card">
+          <h4>40 &mdash; Gemma 4 MoE Fine-Tuning</h4>
+          <p>Fine-tune Gemma 4 26B-A4B MoE (128 experts, top-8 routing + 1 shared). LoRA auto-targets expert layers.</p>
+          <div class="example-tags"><span class="example-tag">VLM</span><span class="example-tag">Gemma 4</span><span class="example-tag">MoE</span><span class="example-tag">Vision</span></div>
+          <button class="example-toggle">View Code</button>
+          <div class="example-code">
+            <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
+<pre><code class="language-python">from mlx_tune import FastVisionModel, UnslothVisionDataCollator, VLMSFTTrainer
+
+model, processor = FastVisionModel.from_pretrained(
+    "mlx-community/gemma-4-26b-a4b-it-4bit",
+)
+model = FastVisionModel.get_peft_model(
+    model, finetune_vision_layers=True,
+    finetune_language_layers=True, r=8, lora_alpha=8,
+)
+trainer = VLMSFTTrainer(
+    model=model, tokenizer=processor,
+    data_collator=UnslothVisionDataCollator(model, processor),
+    train_dataset=dataset,
+    args=VLMSFTConfig(max_steps=20, learning_rate=1e-4),
+)
+trainer.train()</code></pre>
+            </div>
+            <p><a href="https://github.com/ARahim3/mlx-tune/blob/main/examples/40_gemma4_moe_finetuning.py" target="_blank">Full source &rarr;</a></p>
           </div>
         </div>
       </div>
@@ -1152,6 +1265,7 @@ trainer.train()</code></pre>
   <script src="assets/js/prism.min.js"></script>
   <script src="assets/js/prism-python.min.js"></script>
   <script src="assets/js/prism-bash.min.js"></script>
+  <script src="assets/js/search-index.js"></script>
   <script src="assets/js/main.js"></script>
 </body>
 </html>

@@ -483,3 +483,30 @@ class TestResolveTargetModules:
         assert "self_attn.q_proj" in resolved
         assert "self_attn.v_proj" in resolved
         assert "mlp.gate_proj" in resolved
+
+
+class TestGemma4Redirect:
+    """Test that Gemma 4 models redirect to FastVisionModel."""
+
+    def test_gemma4_redirect_to_vlm(self):
+        """Gemma 4 via FastLanguageModel should raise with helpful redirect."""
+        from unittest.mock import patch
+        with patch("mlx_tune.model.mlx_load", side_effect=Exception("model not found")):
+            with pytest.raises(RuntimeError, match="FastVisionModel"):
+                FastLanguageModel.from_pretrained("google/gemma-4-E4B-it")
+
+    def test_gemma4_redirect_variants(self):
+        """All Gemma 4 naming variants should trigger the redirect."""
+        from unittest.mock import patch
+        for name in ["google/gemma-4-E2B-it", "mlx-community/gemma4-27b-it-4bit",
+                      "google/gemma-4-31b-it", "google/gemma-4-27b-it"]:
+            with patch("mlx_tune.model.mlx_load", side_effect=Exception("model not found")):
+                with pytest.raises(RuntimeError, match="FastVisionModel"):
+                    FastLanguageModel.from_pretrained(name)
+
+    def test_non_gemma4_no_redirect(self):
+        """Non-Gemma-4 models should NOT trigger the redirect."""
+        from unittest.mock import patch
+        with patch("mlx_tune.model.mlx_load", side_effect=Exception("model not found")):
+            with pytest.raises(RuntimeError, match="Failed to load model"):
+                FastLanguageModel.from_pretrained("google/gemma-3-27b-it")

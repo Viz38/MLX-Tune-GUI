@@ -253,6 +253,12 @@ CHAT_TEMPLATES: Dict[str, ChatTemplateEntry] = {
         bos_token="<bos>",
         stop_token="<end_of_turn>",
     ),
+    "gemma-4": ChatTemplateEntry(
+        template=_GEMMA_TEMPLATE,
+        eos_token="<end_of_turn>",
+        bos_token="<bos>",
+        stop_token="<end_of_turn>",
+    ),
 
     # Qwen family
     "qwen-2.5": ChatTemplateEntry(
@@ -346,6 +352,7 @@ TEMPLATE_ALIASES: Dict[str, str] = {
     "gemma": "gemma-2",
     "gemma2": "gemma-2",
     "gemma3": "gemma-3",
+    "gemma4": "gemma-4",
 
     # Qwen aliases
     "qwen": "qwen-2.5",
@@ -738,6 +745,8 @@ def _detect_template_from_tokenizer(tokenizer: Any) -> str:
             return 'llama-3.1'
         return 'llama-3'
 
+    if 'gemma-4' in name or 'gemma4' in name:
+        return 'gemma-4'
     if 'gemma-3' in name or 'gemma3' in name:
         return 'gemma-3'
     if 'gemma' in name:
@@ -964,7 +973,9 @@ def get_template_for_model(model_name: str) -> str:
             return 'llama-3.1'
         return 'llama-3'
 
-    if 'gemma-3' in name:
+    if 'gemma-4' in name or 'gemma4' in name:
+        return 'gemma-4'
+    if 'gemma-3' in name or 'gemma3' in name:
         return 'gemma-3'
     if 'gemma' in name:
         return 'gemma-2'
@@ -1100,6 +1111,10 @@ def _get_template_parts(template_name: str) -> Dict[str, str]:
             "response_part": "<start_of_turn>model\n",
         },
         "gemma-3": {
+            "instruction_part": "<start_of_turn>user\n",
+            "response_part": "<start_of_turn>model\n",
+        },
+        "gemma-4": {
             "instruction_part": "<start_of_turn>user\n",
             "response_part": "<start_of_turn>model\n",
         },
