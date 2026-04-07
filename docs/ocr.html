@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OCR Fine-Tuning &mdash; MLX-Tune Docs</title>
-  <meta name="description" content="Fine-tune OCR models on Apple Silicon with MLX-Tune. Dedicated OCR models, VLM-based OCR, evaluation metrics, and GRPO training with CER rewards.">
+  <title>OCR Fine-Tuning &mdash; mlx-tune Docs</title>
+  <meta name="description" content="Fine-tune OCR models on Apple Silicon with mlx-tune. Dedicated OCR models, VLM-based OCR, evaluation metrics, and GRPO training with CER rewards.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text x='50%25' y='73%25' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' font-weight='900' font-size='22' fill='%23e6edf3'>m</text></svg>">
-  <meta property="og:title" content="OCR Fine-Tuning - MLX-Tune Docs">
-  <meta property="og:description" content="Fine-tune OCR models on Apple Silicon with MLX-Tune. Dedicated OCR models, VLM-based OCR, evaluation metrics, and GRPO training.">
+  <meta property="og:title" content="OCR Fine-Tuning - mlx-tune Docs">
+  <meta property="og:description" content="Fine-tune OCR models on Apple Silicon with mlx-tune. Dedicated OCR models, VLM-based OCR, evaluation metrics, and GRPO training.">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <meta property="og:url" content="https://arahim3.github.io/mlx-tune/ocr.html">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OCR Fine-Tuning - MLX-Tune Docs">
-  <meta name="twitter:description" content="Fine-tune OCR models on Apple Silicon with MLX-Tune. Dedicated OCR models, VLM-based OCR, evaluation metrics.">
+  <meta name="twitter:title" content="OCR Fine-Tuning - mlx-tune Docs">
+  <meta name="twitter:description" content="Fine-tune OCR models on Apple Silicon with mlx-tune. Dedicated OCR models, VLM-based OCR, evaluation metrics.">
   <meta name="twitter:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -91,13 +91,13 @@
 
     <main class="content">
       <h1>OCR Fine-Tuning</h1>
-      <p>Fine-tune OCR models on Apple Silicon. MLX-Tune supports both dedicated OCR architectures and general VLMs adapted for document understanding &mdash; all with native LoRA, built-in evaluation metrics, and CER-based GRPO training.</p>
+      <p>Fine-tune OCR models on Apple Silicon. <code>mlx-tune</code> supports both dedicated OCR architectures and general VLMs adapted for document understanding &mdash; all with native LoRA, built-in evaluation metrics, and CER-based GRPO training.</p>
 
       <!-- ===== Overview ===== -->
       <section class="section" id="overview">
         <div class="section-label">Overview</div>
         <h2 style="margin-top: 0;">Two tracks for OCR</h2>
-        <p>MLX-Tune provides two complementary approaches to OCR fine-tuning, depending on your accuracy and latency requirements.</p>
+        <p><code>mlx-tune</code> provides two complementary approaches to OCR fine-tuning, depending on your accuracy and latency requirements.</p>
 
         <div class="callout">
           <div class="callout-title">Dedicated OCR Models</div>
@@ -109,7 +109,7 @@
           <p>Large vision-language models like Qwen3.5, Qwen2.5-VL, and Pixtral can be fine-tuned for OCR tasks using the same VLM pipeline. This approach excels on complex layouts, handwriting, and documents requiring reasoning (e.g., form understanding, table extraction). Use <code>FastVisionModel</code> from the <a href="vlm.html">VLM track</a> for these models.</p>
         </div>
 
-        <h3>What makes MLX-Tune OCR special</h3>
+        <h3>What makes mlx-tune OCR special</h3>
         <ul>
           <li><strong>Apple Silicon native</strong> &mdash; No CUDA required. Train and evaluate OCR models entirely on your Mac using the MLX framework.</li>
           <li><strong>LoRA fine-tuning</strong> &mdash; Efficient adapter-based training. Fine-tune dedicated OCR models with as little as 8 GB unified memory.</li>
@@ -479,7 +479,7 @@ result = trainer.train()</code></pre>
       <section class="section" id="evaluation">
         <div class="section-label">Evaluation</div>
         <h2 style="margin-top: 0;">Evaluation Metrics</h2>
-        <p>MLX-Tune provides three standard OCR evaluation metrics, computed by <code>model.evaluate()</code> or available as standalone functions.</p>
+        <p><code>mlx-tune</code> provides three standard OCR evaluation metrics, computed by <code>model.evaluate()</code> or available as standalone functions.</p>
 
         <div class="api-entry">
           <h3>Character Error Rate (CER)</h3>

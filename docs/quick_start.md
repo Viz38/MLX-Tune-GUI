@@ -1,6 +1,6 @@
-# Quick Start Guide - MLX-Tune
+# Quick Start Guide - `mlx-tune`
 
-Get started with MLX-Tune in under 5 minutes!
+Get started with `mlx-tune` in under 5 minutes!
 
 ## Installation
 
@@ -10,7 +10,7 @@ Get started with MLX-Tune in under 5 minutes!
 - Python 3.9+
 - 8GB+ RAM (16GB+ recommended)
 
-### Install MLX-Tune
+### Install `mlx-tune`
 
 ```bash
 pip install mlx-tune
@@ -100,7 +100,7 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 )
 ```
 
-**After (MLX-Tune with MLX):**
+**After (`mlx-tune` with MLX):**
 ```python
 from mlx_tune import FastLanguageModel  # ← Only change!
 

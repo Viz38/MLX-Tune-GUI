@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MLX-Tune &mdash; Fine-tune LLMs, Vision, Audio, and OCR models on Apple Silicon</title>
+  <title>mlx-tune &mdash; Fine-tune LLMs, Vision, Audio, and OCR models on Apple Silicon</title>
   <meta name="description" content="Fine-tune LLMs, Vision, TTS, STT, and OCR models on Apple Silicon with MLX. Unsloth-compatible API.">
 
   <!-- Favicon: bold "m" in SVG -->
@@ -12,12 +12,12 @@
 
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="MLX-Tune - Fine-tune LLMs, Vision, and Audio models on Apple Silicon">
+  <meta property="og:title" content="mlx-tune - Fine-tune LLMs, Vision, and Audio models on Apple Silicon">
   <meta property="og:description" content="Fine-tune LLMs, Vision, TTS, and STT models on Apple Silicon with MLX. Unsloth-compatible API.">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <meta property="og:url" content="https://arahim3.github.io/mlx-tune/">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="MLX-Tune - Fine-tune LLMs, Vision, and Audio models on Apple Silicon">
+  <meta name="twitter:title" content="mlx-tune - Fine-tune LLMs, Vision, and Audio models on Apple Silicon">
   <meta name="twitter:description" content="Fine-tune LLMs, Vision, TTS, and STT models on Apple Silicon with MLX.">
   <meta name="twitter:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
 
@@ -174,7 +174,7 @@
       <!-- ===== Hero ===== -->
       <section class="hero hero-glow">
         <span class="hero-version">v0.4.19</span>
-        <img src="assets/img/logo.png" alt="MLX-Tune" class="hero-logo">
+        <img src="assets/img/logo.png" alt="mlx-tune" class="hero-logo">
         <h1 class="hero-tagline">Fine-tune LLMs, Vision, and Audio models on your Mac</h1>
         <p class="hero-subtitle">SFT, DPO, GRPO, Vision, TTS, STT, and OCR fine-tuning &mdash; natively on MLX. Unsloth-compatible API.</p>
 
@@ -284,7 +284,7 @@ from trl import SFTTrainer, SFTConfig</code></pre>
             </div>
           </div>
           <div class="code-compare-panel">
-            <div class="code-compare-label">MLX-Tune (Apple Silicon)</div>
+            <div class="code-compare-label">mlx-tune (Apple Silicon)</div>
             <div class="code-block-wrapper">
               <button class="copy-btn">Copy</button>
               <pre><code class="language-python">from mlx_tune import FastLanguageModel
@@ -347,7 +347,7 @@ model.save_pretrained_merged("merged", tokenizer)  # Full model</code></pre>
       <!-- ===== Installation ===== -->
       <section class="section" id="installation">
         <div class="section-label">Installation</div>
-        <h2 style="margin-top: 0;">Get MLX-Tune</h2>
+        <h2 style="margin-top: 0;">Get mlx-tune</h2>
 
         <h3>Using uv (recommended)</h3>
         <div class="code-block-wrapper">
@@ -488,14 +488,14 @@ uv pip install -e .</code></pre>
       <!-- ===== Comparison ===== -->
       <section class="section" id="comparison">
         <div class="section-label">Comparison</div>
-        <h2 style="margin-top: 0;">MLX-Tune vs Unsloth</h2>
+        <h2 style="margin-top: 0;">mlx-tune vs Unsloth</h2>
 
         <table>
           <thead>
             <tr>
               <th>Feature</th>
               <th>Unsloth (CUDA)</th>
-              <th>MLX-Tune</th>
+              <th>mlx-tune</th>
             </tr>
           </thead>
           <tbody>
@@ -529,7 +529,7 @@ uv pip install -e .</code></pre>
 
         <div class="callout">
           <div class="callout-title">Note</div>
-          <p>MLX-Tune is <strong>not</strong> a replacement for Unsloth. It&rsquo;s a bridge: prototype on your Mac, then deploy to CUDA with the original Unsloth for production training.</p>
+          <p><code>mlx-tune</code> is <strong>not</strong> a replacement for Unsloth. It&rsquo;s a bridge: prototype on your Mac, then deploy to CUDA with the original Unsloth for production training.</p>
         </div>
       </section>
 
