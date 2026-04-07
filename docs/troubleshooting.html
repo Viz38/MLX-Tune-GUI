@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Troubleshooting &mdash; MLX-Tune Docs</title>
-  <meta name="description" content="Common issues and solutions for MLX-Tune.">
+  <title>Troubleshooting &mdash; mlx-tune Docs</title>
+  <meta name="description" content="Common issues and solutions for mlx-tune.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text x='50%25' y='73%25' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' font-weight='900' font-size='22' fill='%23e6edf3'>m</text></svg>">
-  <meta property="og:title" content="Troubleshooting - MLX-Tune Docs">
+  <meta property="og:title" content="Troubleshooting - mlx-tune Docs">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,7 +85,7 @@
       <!-- Model Not Found -->
       <h2 id="model-not-found">Model Not Found</h2>
       <p><strong>Error:</strong> <code>Model 'xyz' not found</code></p>
-      <p>MLX-Tune uses models from the <code>mlx-community/</code> organization on HuggingFace. CUDA-specific models (with <code>-bnb-4bit</code> suffix from <code>unsloth/</code>) won&rsquo;t work.</p>
+      <p><code>mlx-tune</code> uses models from the <code>mlx-community/</code> organization on HuggingFace. CUDA-specific models (with <code>-bnb-4bit</code> suffix from <code>unsloth/</code>) won&rsquo;t work.</p>
       <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-python"># Don't use CUDA-specific models
 # model_name = "unsloth/Meta-Llama-3.1-8B-bnb-4bit"  # Won't work!
@@ -144,7 +144,7 @@ response = generate(model.model, tokenizer,
 
       <!-- GGUF Export -->
       <h2 id="gguf">GGUF Export from Quantized Models</h2>
-      <p>GGUF export (<code>save_pretrained_gguf</code>) doesn&rsquo;t work with quantized (4-bit) base models. This is a <a href="https://github.com/ml-explore/mlx-lm/issues/353" target="_blank">known mlx-lm limitation</a>, not an MLX-Tune bug.</p>
+      <p>GGUF export (<code>save_pretrained_gguf</code>) doesn&rsquo;t work with quantized (4-bit) base models. This is a <a href="https://github.com/ml-explore/mlx-lm/issues/353" target="_blank">known mlx-lm limitation</a>, not an <code>mlx-tune</code> bug.</p>
 
       <h3>What works</h3>
       <table>
@@ -186,7 +186,7 @@ model.save_pretrained_gguf("model", tokenizer)  # Works!</code></pre>
       <p>VLM training requires <code>per_device_train_batch_size=1</code> because images produce variable numbers of vision tokens. The <code>VLMSFTTrainer</code> enforces this automatically. Use <code>gradient_accumulation_steps</code> to simulate larger batch sizes.</p>
 
       <h3>Think tags in output</h3>
-      <p>Qwen3.5 models may produce <code>&lt;think&gt;...&lt;/think&gt;</code> tags in generated text. MLX-Tune&rsquo;s <code>generate()</code> method strips these automatically.</p>
+      <p>Qwen3.5 models may produce <code>&lt;think&gt;...&lt;/think&gt;</code> tags in generated text. <code>mlx-tune</code>&rsquo;s <code>generate()</code> method strips these automatically.</p>
 
       <h3>Image format</h3>
       <p>Images should be PIL Image objects. The <code>UnslothVisionDataCollator</code> handles conversion from datasets automatically.</p>
@@ -280,7 +280,7 @@ ffmpeg -version</code></pre>
       </div>
 
       <h3><code>datasets</code> version conflict (torchcodec)</h3>
-      <p><code>datasets &ge; 4.0</code> dropped <code>soundfile</code>/<code>librosa</code> audio backends and requires <code>torchcodec</code>, which needs specific FFmpeg versions (4&ndash;7) that conflict with Homebrew's FFmpeg 8. MLX-Tune pins <code>datasets &lt; 4.0</code> to avoid this. If you see:</p>
+      <p><code>datasets &ge; 4.0</code> dropped <code>soundfile</code>/<code>librosa</code> audio backends and requires <code>torchcodec</code>, which needs specific FFmpeg versions (4&ndash;7) that conflict with Homebrew's FFmpeg 8. <code>mlx-tune</code> pins <code>datasets &lt; 4.0</code> to avoid this. If you see:</p>
       <div class="code-block-wrapper"><button class="copy-btn">Copy</button>
 <pre><code class="language-text">ImportError: torchcodec is required but not installed
 # or
@@ -292,7 +292,7 @@ RuntimeError: FFmpeg version 8 is not supported by torchcodec</code></pre>
       </div>
 
       <h3>Model-specific codec not loading</h3>
-      <p>Each TTS model uses a different audio codec. MLX-Tune auto-detects the codec from the model, but if you see errors about missing codec attributes:</p>
+      <p>Each TTS model uses a different audio codec. <code>mlx-tune</code> auto-detects the codec from the model, but if you see errors about missing codec attributes:</p>
       <ul style="color:var(--text-secondary);line-height:2;">
         <li><strong>Orpheus</strong> &mdash; Uses SNAC. Pass <code>codec_model="mlx-community/snac_24khz"</code> explicitly if auto-detection fails.</li>
         <li><strong>OuteTTS</strong> &mdash; Uses DAC. The codec is loaded via <code>AudioProcessor()</code> internally.</li>

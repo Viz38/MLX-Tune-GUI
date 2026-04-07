@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vision Model Fine-Tuning &mdash; MLX-Tune Docs</title>
-  <meta name="description" content="Fine-tune vision-language models like Qwen3.5 on Apple Silicon with MLX-Tune. Real LoRA on both vision encoder and language model.">
+  <title>Vision Model Fine-Tuning &mdash; mlx-tune Docs</title>
+  <meta name="description" content="Fine-tune vision-language models like Qwen3.5 on Apple Silicon with mlx-tune. Real LoRA on both vision encoder and language model.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text x='50%25' y='73%25' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' font-weight='900' font-size='22' fill='%23e6edf3'>m</text></svg>">
-  <meta property="og:title" content="Vision Model Fine-Tuning - MLX-Tune Docs">
+  <meta property="og:title" content="Vision Model Fine-Tuning - mlx-tune Docs">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -456,7 +456,7 @@ model.save_pretrained_merged("./vlm_merged", processor)</code></pre>
 
         <div class="callout">
           <div class="callout-title">Qwen3.5 think tags</div>
-          <p>Qwen3.5 models generate <code>&lt;think&gt;...&lt;/think&gt;</code> reasoning tags in their output. MLX-Tune automatically strips these from <code>generate()</code> results so you get clean responses.</p>
+          <p>Qwen3.5 models generate <code>&lt;think&gt;...&lt;/think&gt;</code> reasoning tags in their output. <code>mlx-tune</code> automatically strips these from <code>generate()</code> results so you get clean responses.</p>
         </div>
 
         <div class="callout">

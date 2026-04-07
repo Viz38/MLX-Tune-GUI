@@ -1,4 +1,4 @@
-/* ===== MLX-Tune Docs - Main JS ===== */
+/* ===== mlx-tune Docs - Main JS ===== */
 
 (function () {
   'use strict';
