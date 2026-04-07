@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Audio Fine-Tuning &mdash; MLX-Tune Docs</title>
-  <meta name="description" content="TTS and STT fine-tuning on Apple Silicon with MLX-Tune. Orpheus, OuteTTS, Spark-TTS, Whisper, Moonshine, and more.">
+  <title>Audio Fine-Tuning &mdash; mlx-tune Docs</title>
+  <meta name="description" content="TTS and STT fine-tuning on Apple Silicon with mlx-tune. Orpheus, OuteTTS, Spark-TTS, Whisper, Moonshine, and more.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text x='50%25' y='73%25' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' font-weight='900' font-size='22' fill='%23e6edf3'>m</text></svg>">
-  <meta property="og:title" content="Audio Fine-Tuning - MLX-Tune Docs">
+  <meta property="og:title" content="Audio Fine-Tuning - mlx-tune Docs">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -93,7 +93,7 @@
 
     <main class="content">
       <h1>Audio Fine-Tuning</h1>
-      <p>Fine-tune TTS and STT models on Apple Silicon. MLX-Tune is the first library to offer native LoRA fine-tuning for audio models on MLX &mdash; train text-to-speech and speech-to-text models directly on your Mac.</p>
+      <p>Fine-tune TTS and STT models on Apple Silicon. <code>mlx-tune</code> is the first library to offer native LoRA fine-tuning for audio models on MLX &mdash; train text-to-speech and speech-to-text models directly on your Mac.</p>
 
       <!-- ===== Installation ===== -->
       <section class="section" id="install">
@@ -116,7 +116,7 @@ brew install ffmpeg</code></pre>
 
         <div class="callout">
           <div class="callout-title">datasets version</div>
-          <p>MLX-Tune pins <code>datasets&lt;4.0.0</code>. Version 4.0+ dropped <code>soundfile</code> support and requires <code>torchcodec</code> (which has FFmpeg version conflicts on macOS). If you see <em>"please install torchcodec"</em> errors, downgrade: <code>uv pip install 'datasets&lt;4.0.0'</code>.</p>
+          <p><code>mlx-tune</code> pins <code>datasets&lt;4.0.0</code>. Version 4.0+ dropped <code>soundfile</code> support and requires <code>torchcodec</code> (which has FFmpeg version conflicts on macOS). If you see <em>"please install torchcodec"</em> errors, downgrade: <code>uv pip install 'datasets&lt;4.0.0'</code>.</p>
         </div>
       </section>
 
@@ -124,7 +124,7 @@ brew install ffmpeg</code></pre>
       <section class="section" id="models">
         <div class="section-label">Overview</div>
         <h2 style="margin-top: 0;">Supported Models</h2>
-        <p>MLX-Tune supports multiple TTS and STT model architectures. Models are auto-detected from their name &mdash; no manual profile configuration needed.</p>
+        <p><code>mlx-tune</code> supports multiple TTS and STT model architectures. Models are auto-detected from their name &mdash; no manual profile configuration needed.</p>
 
         <h3>Text-to-Speech</h3>
         <table class="api-params">
@@ -159,7 +159,7 @@ brew install ffmpeg</code></pre>
           <span class="module-path">mlx_tune.tts</span>
         </div>
 
-        <p>TTS models in MLX-Tune are decoder-only language models that predict discrete audio tokens. The API is the same regardless of model &mdash; <code>FastTTSModel</code> auto-detects the architecture and codec. Each model uses a different audio codec (SNAC, DAC, BiCodec, or Mimi), but this is handled transparently.</p>
+        <p>TTS models in <code>mlx-tune</code> are decoder-only language models that predict discrete audio tokens. The API is the same regardless of model &mdash; <code>FastTTSModel</code> auto-detects the architecture and codec. Each model uses a different audio codec (SNAC, DAC, BiCodec, or Mimi), but this is handled transparently.</p>
 
         <!-- Model-specific sections -->
         <div class="api-entry" id="tts-orpheus">
@@ -371,7 +371,7 @@ trainer.train()</code></pre>
           <span class="module-path">mlx_tune.stt</span>
         </div>
 
-        <p>STT models in MLX-Tune are encoder-decoder architectures. The encoder processes audio input (mel spectrograms or raw waveforms), and the decoder generates text tokens autoregressively. LoRA adapters are applied to both encoder and decoder attention blocks. The API auto-detects the model type.</p>
+        <p>STT models in <code>mlx-tune</code> are encoder-decoder architectures. The encoder processes audio input (mel spectrograms or raw waveforms), and the decoder generates text tokens autoregressively. LoRA adapters are applied to both encoder and decoder attention blocks. The API auto-detects the model type.</p>
 
         <!-- Whisper -->
         <div class="api-entry" id="stt-whisper">
@@ -733,7 +733,7 @@ FastTTSModel.convert(
 
         <div class="callout">
           <div class="callout-title">Auto-Detection</div>
-          <p>MLX-Tune auto-detects the model type from the model name. You don't need to specify profiles, codecs, or token formats manually &mdash; just pass the model ID to <code>from_pretrained()</code>.</p>
+          <p><code>mlx-tune</code> auto-detects the model type from the model name. You don't need to specify profiles, codecs, or token formats manually &mdash; just pass the model ID to <code>from_pretrained()</code>.</p>
         </div>
 
         <div class="callout">

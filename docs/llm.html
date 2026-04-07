@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM Fine-Tuning &mdash; MLX-Tune Docs</title>
+  <title>LLM Fine-Tuning &mdash; mlx-tune Docs</title>
   <meta name="description" content="Fine-tune language models on Apple Silicon with LoRA. SFT, DPO, GRPO, KTO, SimPO — all natively on MLX.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text x='50%25' y='73%25' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' font-weight='900' font-size='22' fill='%23e6edf3'>m</text></svg>">
-  <meta property="og:title" content="LLM Fine-Tuning - MLX-Tune Docs">
+  <meta property="og:title" content="LLM Fine-Tuning - mlx-tune Docs">
   <meta property="og:description" content="Fine-tune language models on Apple Silicon with LoRA. SFT, DPO, GRPO, KTO, SimPO — all natively on MLX.">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <meta property="og:url" content="https://arahim3.github.io/mlx-tune/llm.html">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="LLM Fine-Tuning - MLX-Tune Docs">
+  <meta name="twitter:title" content="LLM Fine-Tuning - mlx-tune Docs">
   <meta name="twitter:description" content="Fine-tune language models on Apple Silicon with LoRA. SFT, DPO, GRPO, KTO, SimPO — all natively on MLX.">
   <meta name="twitter:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -252,7 +252,7 @@ model.save_pretrained("lora_model")</code></pre>
           <p>Export to GGUF format for use with Ollama, llama.cpp, and other inference engines.</p>
           <div class="callout">
             <div class="callout-title">GGUF Limitation</div>
-            <p>GGUF export works with <strong>non-quantized models only</strong>. Quantized (4-bit) model export is an <a href="https://github.com/ml-explore/mlx-lm/issues/353" target="_blank" rel="noopener">mlx-lm limitation</a>, not an MLX-Tune bug. Load the model with <code>load_in_4bit=False</code> before exporting.</p>
+            <p>GGUF export works with <strong>non-quantized models only</strong>. Quantized (4-bit) model export is an <a href="https://github.com/ml-explore/mlx-lm/issues/353" target="_blank" rel="noopener">mlx-lm limitation</a>, not an <code>mlx-tune</code> bug. Load the model with <code>load_in_4bit=False</code> before exporting.</p>
           </div>
 
           <h4>model.push_to_hub()</h4>
@@ -522,10 +522,10 @@ trainer.train()</code></pre>
           <span class="module-path">Mixture of Experts</span>
         </div>
 
-        <p>MLX-Tune automatically detects MoE architectures and applies per-expert LoRA via <code>LoRASwitchLinear</code>. No special API &mdash; use the same <code>FastLanguageModel</code> and <code>SFTTrainer</code> as dense models.</p>
+        <p><code>mlx-tune</code> automatically detects MoE architectures and applies per-expert LoRA via <code>LoRASwitchLinear</code>. No special API &mdash; use the same <code>FastLanguageModel</code> and <code>SFTTrainer</code> as dense models.</p>
 
         <div class="callout">
-          <strong>How it works:</strong> When you specify <code>target_modules=["gate_proj", ...]</code>, MLX-Tune inspects the model&rsquo;s actual layer structure and resolves paths dynamically:
+          <strong>How it works:</strong> When you specify <code>target_modules=["gate_proj", ...]</code>, <code>mlx-tune</code> inspects the model&rsquo;s actual layer structure and resolves paths dynamically:
           <ul style="margin-top: 0.5rem; margin-bottom: 0;">
             <li><strong>Expert layers</strong>: <code>mlp.switch_mlp.gate_proj</code> &rarr; <code>LoRASwitchLinear</code> (per-expert LoRA)</li>
             <li><strong>Shared experts</strong>: <code>mlp.shared_expert.gate_proj</code> &rarr; <code>LoRALinear</code></li>

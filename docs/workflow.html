@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Workflow &mdash; MLX-Tune</title>
-  <meta name="description" content="Translate your Unsloth training scripts to run on Apple Silicon with MLX-Tune.">
+  <title>Workflow &mdash; mlx-tune</title>
+  <meta name="description" content="Translate your Unsloth training scripts to run on Apple Silicon with mlx-tune.">
 
   <!-- Favicon: bold "m" in SVG -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d1117'/><text x='50%25' y='73%25' text-anchor='middle' font-family='system-ui,-apple-system,sans-serif' font-weight='900' font-size='22' fill='%23e6edf3'>m</text></svg>">
@@ -12,13 +12,13 @@
 
   <!-- Open Graph / Social -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Workflow - MLX-Tune Translation Guide">
-  <meta property="og:description" content="Translate your Unsloth training scripts to run on Apple Silicon with MLX-Tune.">
+  <meta property="og:title" content="Workflow - mlx-tune Translation Guide">
+  <meta property="og:description" content="Translate your Unsloth training scripts to run on Apple Silicon with mlx-tune.">
   <meta property="og:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
   <meta property="og:url" content="https://arahim3.github.io/mlx-tune/workflow.html">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Workflow - MLX-Tune Translation Guide">
-  <meta name="twitter:description" content="Translate your Unsloth training scripts to run on Apple Silicon with MLX-Tune.">
+  <meta name="twitter:title" content="Workflow - mlx-tune Translation Guide">
+  <meta name="twitter:description" content="Translate your Unsloth training scripts to run on Apple Silicon with mlx-tune.">
   <meta name="twitter:image" content="https://arahim3.github.io/mlx-tune/assets/img/og-image.png">
 
   <!-- Fonts -->
@@ -107,7 +107,7 @@
 
     <main class="content">
 
-      <h1>Unsloth &rarr; MLX-Tune Translation Guide</h1>
+      <h1>Unsloth &rarr; mlx-tune Translation Guide</h1>
       <p>Everything you learned from Unsloth tutorials works on your Mac. This page shows exactly what to change&mdash;and what stays the same.</p>
 
       <!-- ===== The Workflow ===== -->
@@ -147,7 +147,7 @@
           <thead>
             <tr>
               <th>Unsloth / TRL</th>
-              <th>MLX-Tune</th>
+              <th>mlx-tune</th>
             </tr>
           </thead>
           <tbody>
@@ -199,13 +199,13 @@
       <section id="models">
         <div class="section-label">Model Names</div>
         <h2 style="margin-top: 0;">HuggingFace model mapping</h2>
-        <p>Unsloth uses models from the <code>unsloth/</code> org on HuggingFace. MLX-Tune uses pre-converted models from the <code>mlx-community/</code> org, which are optimized for Apple&rsquo;s MLX framework.</p>
+        <p>Unsloth uses models from the <code>unsloth/</code> org on HuggingFace. <code>mlx-tune</code> uses pre-converted models from the <code>mlx-community/</code> org, which are optimized for Apple&rsquo;s MLX framework.</p>
 
         <table>
           <thead>
             <tr>
               <th>Unsloth Model</th>
-              <th>MLX-Tune Equivalent</th>
+              <th>mlx-tune Equivalent</th>
             </tr>
           </thead>
           <tbody>
@@ -253,7 +253,7 @@
             <tr>
               <th>Parameter</th>
               <th>Unsloth</th>
-              <th>MLX-Tune</th>
+              <th>mlx-tune</th>
               <th>Notes</th>
             </tr>
           </thead>
@@ -313,13 +313,13 @@
       <!-- ===== Real Notebook Diff ===== -->
       <section id="real-diff">
         <div class="section-label">Real Example</div>
-        <h2 style="margin-top: 0;">Actual Unsloth notebook &rarr; MLX-Tune</h2>
-        <p>Here&rsquo;s Unsloth&rsquo;s <a href="https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Qwen3_5_(0_8B)_Vision.ipynb" target="_blank">Qwen3.5 Vision notebook</a> converted to MLX-Tune. Only the highlighted lines change.</p>
+        <h2 style="margin-top: 0;">Actual Unsloth notebook &rarr; mlx-tune</h2>
+        <p>Here&rsquo;s Unsloth&rsquo;s <a href="https://colab.research.google.com/github/unslothai/notebooks/blob/main/nb/Qwen3_5_(0_8B)_Vision.ipynb" target="_blank">Qwen3.5 Vision notebook</a> converted to <code>mlx-tune</code>. Only the highlighted lines change.</p>
 
         <div class="diff-viewer">
           <div class="diff-header">
             <span class="diff-file">qwen35_vision_finetuning.py</span>
-            <span>Unsloth &rarr; MLX-Tune changes</span>
+            <span>Unsloth &rarr; mlx-tune changes</span>
           </div>
           <div class="diff-body">
             <div class="diff-separator">@@ Imports @@</div>
@@ -437,7 +437,7 @@ model.save_pretrained("lora_model")</code></pre>
             </div>
           </div>
           <div class="code-compare-panel">
-            <div class="code-compare-label">MLX-Tune (Apple Silicon)</div>
+            <div class="code-compare-label">mlx-tune (Apple Silicon)</div>
             <div class="code-block-wrapper">
               <button class="copy-btn">Copy</button>
               <pre><code class="language-python">from mlx_tune import FastLanguageModel
@@ -483,7 +483,7 @@ model.save_pretrained("lora_model")</code></pre>
       <section id="vlm">
         <div class="section-label">Vision Models</div>
         <h2 style="margin-top: 0;">VLM fine-tuning translation</h2>
-        <p>Vision-Language Model fine-tuning follows the same pattern, with a few MLX-Tune-specific additions.</p>
+        <p>Vision-Language Model fine-tuning follows the same pattern, with a few <code>mlx-tune</code>-specific additions.</p>
 
         <h3>Import changes</h3>
         <div class="code-compare">
@@ -497,7 +497,7 @@ from trl import SFTTrainer, SFTConfig</code></pre>
             </div>
           </div>
           <div class="code-compare-panel">
-            <div class="code-compare-label">MLX-Tune (Apple Silicon)</div>
+            <div class="code-compare-label">mlx-tune (Apple Silicon)</div>
             <div class="code-block-wrapper">
               <button class="copy-btn">Copy</button>
               <pre><code class="language-python">from mlx_tune import FastVisionModel
@@ -513,7 +513,7 @@ from mlx_tune.vlm import VLMSFTTrainer, VLMSFTConfig</code></pre>
             <tr>
               <th>Aspect</th>
               <th>Unsloth</th>
-              <th>MLX-Tune</th>
+              <th>mlx-tune</th>
             </tr>
           </thead>
           <tbody>
@@ -542,7 +542,7 @@ from mlx_tune.vlm import VLMSFTTrainer, VLMSFTConfig</code></pre>
 
         <div class="callout">
           <div class="callout-title">Important</div>
-          <p>VLM training in MLX-Tune <strong>must</strong> use <code>per_device_train_batch_size=1</code>. Images produce variable numbers of vision tokens, so batching is not supported. Use <code>gradient_accumulation_steps</code> to simulate larger effective batch sizes.</p>
+          <p>VLM training in <code>mlx-tune</code> <strong>must</strong> use <code>per_device_train_batch_size=1</code>. Images produce variable numbers of vision tokens, so batching is not supported. Use <code>gradient_accumulation_steps</code> to simulate larger effective batch sizes.</p>
         </div>
       </section>
 
@@ -565,7 +565,7 @@ from mlx_tune.vlm import VLMSFTTrainer, VLMSFTConfig</code></pre>
 
         <div class="callout">
           <div class="callout-title">The Bottom Line</div>
-          <p>If you can fine-tune with Unsloth, you can fine-tune with MLX-Tune. Change the imports, swap the model name, drop the CUDA-specific config&mdash;and you&rsquo;re training on your Mac.</p>
+          <p>If you can fine-tune with Unsloth, you can fine-tune with <code>mlx-tune</code>. Change the imports, swap the model name, drop the CUDA-specific config&mdash;and you&rsquo;re training on your Mac.</p>
         </div>
       </section>
 

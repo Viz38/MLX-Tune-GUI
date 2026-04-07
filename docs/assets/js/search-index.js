@@ -1,4 +1,4 @@
-/* ===== MLX-Tune Docs — Pre-built Search Index ===== */
+/* ===== mlx-tune Docs — Pre-built Search Index ===== */
 /* Regenerate by scanning HTML pages for headings and key phrases */
 
 window.MLX_SEARCH_INDEX = [
@@ -49,7 +49,7 @@ window.MLX_SEARCH_INDEX = [
   { title: "Audio Codecs", section: "SNAC / DAC / BiCodec / Mimi", url: "audio.html#codecs", tags: "codec snac dac bicodec mimi audio tokenizer", page: "Audio" },
 
   // --- Workflow ---
-  { title: "Unsloth to MLX-Tune", section: "Migration Guide", url: "workflow.html", tags: "unsloth migration import translate convert cuda mlx", page: "Workflow" },
+  { title: "Unsloth to mlx-tune", section: "Migration Guide", url: "workflow.html", tags: "unsloth migration import translate convert cuda mlx", page: "Workflow" },
   { title: "Import Translation", section: "Change imports", url: "workflow.html#imports", tags: "import from unsloth from mlx_tune translation", page: "Workflow" },
   { title: "Config Translation", section: "SFTConfig differences", url: "workflow.html#config", tags: "config sftconfig parameters differences", page: "Workflow" },
 
