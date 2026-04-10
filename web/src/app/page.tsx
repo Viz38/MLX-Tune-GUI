@@ -562,7 +562,7 @@ export default function Home() {
           </div>
           <div className="scrollable-content">
             <div className="grid-2">
-              <div className="mac-card-container" style={{ margin: 0 }}>
+              <div className="mac-card-container">
                 <h3>Training Environment</h3>
                 <div className="mac-form-group">
                   <label className="mac-label">Default Output Directory</label>
@@ -585,7 +585,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="mac-card-container" style={{ margin: 0 }}>
+              <div className="mac-card-container">
                 <h3>Interface & Safety</h3>
                 <div className="mac-form-group">
                   <div className="toggle-group" onClick={() => setSettings(prev => ({ ...prev, autoClearLogs: !prev.autoClearLogs }))}>

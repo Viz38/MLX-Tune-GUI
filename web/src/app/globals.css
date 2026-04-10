@@ -358,8 +358,8 @@ h3 {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
 }
 
 /* Terminal */
@@ -485,7 +485,7 @@ h3 {
 @media (max-width: 850px) {
   .grid-2 {
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 24px;
   }
 }
 
