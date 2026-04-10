@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ARahim3/mlx-tune/main/mlx-tune-logo.png" alt="MLX-Tune Logo" width="300"/>
+  <img src="logo.png" alt="MLX-Tune Logo" width="300"/>
 </p>
 
 <p align="center">
