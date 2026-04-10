@@ -88,7 +88,16 @@ export default function Home() {
     temperature: 0.05,
     embeddingLearningRate: '5e-6',
     includeEmbeddings: true,
+    // Pro Defaults
+    useRsLoRA: false,
+    useGradientCheckpointing: 'unsloth',
+    targetModules: '',
+    rewardType: 'none',
+    hubUsername: '',
   });
+
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [showExportModal, setShowExportModal] = useState<any>(null);
 
   const trainingOptions: { id: TrainingType; label: string }[] = [
     { id: 'LLMSFT', label: 'LLM Fine-tuning (SFT)' },
@@ -98,6 +107,7 @@ export default function Home() {
     { id: 'Embedding', label: 'Embedding Fine-tuning' },
     { id: 'OCR', label: 'OCR Fine-tuning' },
     { id: 'CPT', label: 'Continual Pretraining' },
+    { id: 'GRPO', label: 'Reasoning (GRPO)' },
   ];
 
   // Load Settings
@@ -171,6 +181,11 @@ export default function Home() {
     'CPT': [
       'mlx-community/Llama-3.2-1B-4bit',
       'mlx-community/Qwen2.5-1.5B-4bit'
+    ],
+    'GRPO': [
+      'mlx-community/DeepSeek-R1-Distill-Llama-8B-4bit',
+      'mlx-community/Qwen2.5-7B-Instruct-4bit',
+      'mlx-community/Llama-3.1-8B-Instruct-4bit'
     ]
   };
 
@@ -229,6 +244,8 @@ export default function Home() {
       setConfig(prev => ({ ...prev, modelName: defaultModel, datasetName: 'sentence-transformers/all-nli' }));
     } else if (type === 'OCR') {
       setConfig(prev => ({ ...prev, modelName: defaultModel, datasetName: 'nielsr/cord-v2' }));
+    } else if (type === 'GRPO') {
+      setConfig(prev => ({ ...prev, modelName: defaultModel, datasetName: 'ServiceNow/RLHF-Reasoning-Prompt', rewardType: 'combined' }));
     } else {
       setConfig(prev => ({ ...prev, modelName: defaultModel, datasetName: 'yahma/alpaca-cleaned' }));
     }
@@ -290,6 +307,41 @@ export default function Home() {
       }
     } catch (err: any) {
       setLogs(prev => prev + `\nFailed to start process: ${err.message}\n`);
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const handleExport = async (action: 'hub' | 'gguf') => {
+    if (isRunning) return;
+    setIsRunning(true);
+    setLogs('');
+    setShowTerminal(true);
+    setIsMinimized(false);
+    setShowExportModal(null);
+
+    try {
+      const response = await fetch('/api/models/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action, 
+          modelName: showExportModal?.path,
+          hubUsername: config.hubUsername 
+        }),
+      });
+
+      if (!response.body) throw new Error('No response body');
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        setLogs(prev => prev + decoder.decode(value));
+      }
+    } catch (err: any) {
+      setLogs(prev => prev + `\nExport failed: ${err.message}\n`);
     } finally {
       setIsRunning(false);
     }
@@ -427,6 +479,89 @@ export default function Home() {
                   <NumberInput label="LoRA Rank" name="loraRank" value={config.loraRank || 16} onChange={handleChange} min={1} />
                   <NumberInput label="LoRA Alpha" name="loraAlpha" value={config.loraAlpha || 16} onChange={handleChange} min={1} />
                 </div>
+
+                {activeTab === 'GRPO' && (
+                  <div className="mac-form-group" style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '16px' }}>
+                    <label className="mac-label">Reward Logic (Reasoning)</label>
+                    <select name="rewardType" className="mac-input mac-select" value={config.rewardType} onChange={handleChange}>
+                      <option value="accuracy">Accuracy Based</option>
+                      <option value="format">Format Based (Reasoning Tags)</option>
+                      <option value="combined">Combined (70% Acc / 30% Format)</option>
+                      <option value="none">Custom Python Reward</option>
+                    </select>
+                    <p style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 8 }}>
+                      GRPO requires a reward function to score model completions for reasoning traces.
+                    </p>
+                  </div>
+                )}
+
+                {/* Advanced Configuration Accordion */}
+                <div style={{ marginTop: '24px', borderTop: '1px solid #333', paddingTop: '16px' }}>
+                  <div 
+                    onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                    style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      cursor: 'pointer',
+                      padding: '8px 4px',
+                      color: isAdvancedOpen ? 'var(--accent)' : 'inherit'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 21a9 9 0 100-18 9 9 0 000 18z"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                      <h3 style={{ margin: 0, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Performance & Experimental</h3>
+                    </div>
+                    <svg 
+                      width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"
+                      style={{ transform: isAdvancedOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </div>
+
+                  {isAdvancedOpen && (
+                    <div style={{ marginTop: 16, animation: 'fadeIn 0.2s ease-out' }}>
+                      <div className="grid-2">
+                        <div className="toggle-group" onClick={() => setConfig(prev => ({ ...prev, useRsLoRA: !prev.useRsLoRA }))}>
+                          <input type="checkbox" className="mac-checkbox" checked={config.useRsLoRA} readOnly />
+                          <span className="toggle-label">Use rsLoRA (Improved Stability)</span>
+                        </div>
+                        <div className="mac-form-group">
+                          <label className="mac-label">Gradient Checkpointing</label>
+                          <select 
+                            name="useGradientCheckpointing" 
+                            className="mac-input mac-select" 
+                            value={config.useGradientCheckpointing === 'unsloth' ? 'unsloth' : config.useGradientCheckpointing ? 'true' : 'false'}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setConfig(prev => ({ 
+                                ...prev, 
+                                useGradientCheckpointing: val === 'unsloth' ? 'unsloth' : val === 'true' 
+                              }));
+                            }}
+                          >
+                            <option value="false">Off</option>
+                            <option value="true">On (Standard)</option>
+                            <option value="unsloth">On (Unsloth Optimized)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="mac-form-group" style={{ marginTop: 12 }}>
+                        <label className="mac-label">Custom Target Modules (Optional)</label>
+                        <input 
+                          type="text" 
+                          name="targetModules" 
+                          className="mac-input" 
+                          placeholder="e.g. q_proj, v_proj (Leave empty for defaults)"
+                          value={config.targetModules} 
+                          onChange={handleChange} 
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -535,16 +670,79 @@ export default function Home() {
                     <div style={{ fontSize: 12, color: 'var(--text-dim)', wordBreak: 'break-all', opacity: 0.7 }}>{model.path}</div>
                   </div>
                   
-                  <button 
-                    className="run-btn" 
-                    style={{ marginTop: 20, width: '100%', fontSize: 13, padding: '10px' }}
-                    onClick={() => useModel(model)}
-                  >
-                    Load in Orchestrator
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+                    <button 
+                      className="run-btn" 
+                      style={{ flex: 1, fontSize: 13, padding: '10px' }}
+                      onClick={() => useModel(model)}
+                    >
+                      Load
+                    </button>
+                    <button 
+                      className="run-btn" 
+                      style={{ 
+                        flex: 1, 
+                        fontSize: 13, 
+                        padding: '10px', 
+                        background: 'transparent', 
+                        border: '1px solid #444',
+                        color: '#999'
+                      }}
+                      onClick={() => setShowExportModal(model)}
+                    >
+                      Export
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
+
+            {/* Export Modal Overlays */}
+            {showExportModal && (
+              <div style={{ 
+                position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+                background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+              }}>
+                <div 
+                  className="mac-card-container" 
+                  style={{ width: 400, border: '1px solid var(--accent)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <h3 style={{ margin: 0 }}>Model Export & Hub</h3>
+                    <button onClick={() => setShowExportModal(null)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer' }}>×</button>
+                  </div>
+                  
+                  <div className="mac-form-group">
+                    <label className="mac-label">Hugging Face Username</label>
+                    <input 
+                      type="text" 
+                      className="mac-input" 
+                      placeholder="e.g. Viz38"
+                      value={config.hubUsername}
+                      onChange={(e) => setConfig(prev => ({ ...prev, hubUsername: e.target.value }))}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 20 }}>
+                    <button 
+                      className="run-btn" 
+                      style={{ fontSize: 12 }}
+                      onClick={() => handleExport('hub')}
+                    >
+                      Push to Hub
+                    </button>
+                    <button 
+                      className="run-btn" 
+                      style={{ fontSize: 12, background: 'transparent', border: '1px solid #444' }}
+                      onClick={() => handleExport('gguf')}
+                    >
+                      Export GGUF
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {scannedModels.length === 0 && (
               <div style={{ textAlign: 'center', padding: '100px 0', color: 'var(--text-dim)' }}>
                 No local models detected. Make sure Ollama or LM Studio is configured correctly.
