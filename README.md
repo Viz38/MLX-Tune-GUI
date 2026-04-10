@@ -3,13 +3,6 @@
   <em>The professional, Mac-native interface for high-performance MLX fine-tuning.</em>
 </p>
 
-<p align="center">
-  <a href="#features">Features</a> ·
-  <a href="#installation">Installation</a> ·
-  <a href="#model-library">Model Library</a> ·
-  <a href="#contributors--credits">Credits</a>
-</p>
-
 ---
 
 ## 🖥️ Overview
