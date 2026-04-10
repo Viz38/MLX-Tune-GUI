@@ -118,6 +118,47 @@ export default function Home() {
   const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Hub Search State
+  const [hubQuery, setHubQuery] = useState('');
+  const [hubResults, setHubResults] = useState<any[]>([]);
+  const [isSearchingHub, setIsSearchingHub] = useState(false);
+
+  const searchHub = async () => {
+    if (!hubQuery || isSearchingHub) return;
+    setIsSearchingHub(true);
+    try {
+      const res = await fetch(`/api/hub/search?q=${encodeURIComponent(hubQuery)}`);
+      const data = await res.json();
+      setHubResults(data);
+    } catch (err) {
+      console.error('Hub search failed', err);
+    } finally {
+      setIsSearchingHub(false);
+    }
+  };
+
+  // Hardware Stats State
+  const [stats, setStats] = useState<{ memory?: { used: number, total: number, percent: string }, cpu?: { percent: string } }>({});
+  
+  // Training Metrics
+  const [metrics, setMetrics] = useState<{ step: number, loss: number }[]>([]);
+
+  // Telemetry Polling
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        setStats(data);
+      } catch (err) {
+        console.error('Stats fetch failed', err);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     if (mainTab === 'editor' && fileTree.length === 0) {
       fetchFileTree();
@@ -389,6 +430,19 @@ export default function Home() {
         if (done) break;
         const text = decoder.decode(value);
         setLogs(prev => prev + text);
+
+        // Parse Step & Loss for Live Chart
+        // Format: Step 10/100 | Loss: 1.234
+        const metricMatch = text.match(/Step\s+(\d+).+?Loss:\s+([\d.]+)/i);
+        if (metricMatch) {
+          const step = parseInt(metricMatch[1]);
+          const loss = parseFloat(metricMatch[2]);
+          setMetrics(prev => {
+            const exists = prev.find(m => m.step === step);
+            if (exists) return prev;
+            return [...prev, { step, loss }].sort((a, b) => a.step - b.step);
+          });
+        }
       }
     } catch (err: any) {
       setLogs(prev => prev + `\nFailed to start process: ${err.message}\n`);
@@ -497,12 +551,28 @@ export default function Home() {
 
           <div className="main-content">
             <div className="top-nav">
+              <TelemetryBar stats={stats} />
               <div className="top-nav-title">MLX-Tune GUI</div>
             </div>
             <div className="section-header">
               <h1>{trainingOptions.find(o => o.id === activeTab)?.label}</h1>
             </div>
             <div className="scrollable-content">
+              {/* Metrics Chart */}
+              {metrics.length > 1 && (
+                <div className="mac-card-container" style={{ marginBottom: 24, padding: '24px 20px', border: '1px solid var(--accent-dim)', background: 'rgba(58, 134, 255, 0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <div>
+                      <h3 style={{ margin: 0 }}>Loss Convergence</h3>
+                      <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Real-time training diagnostics</div>
+                    </div>
+                    <span className="live-badge">LIVE ANALYTICS ACTIVE</span>
+                  </div>
+                  <div style={{ height: 160, width: '100%', position: 'relative', marginTop: 12 }}>
+                    <LossSparkline data={metrics} color="var(--accent)" />
+                  </div>
+                </div>
+              )}
 
               <div className="mac-card-container">
                 <h3>Base Model Configuration</h3>
@@ -705,6 +775,7 @@ export default function Home() {
       ) : mainTab === 'models' ? (
         <div className="main-content">
           <div className="top-nav">
+            <TelemetryBar stats={stats} />
             <div className="top-nav-title">MLX-Tune GUI</div>
           </div>
           <div className="section-header">
@@ -722,8 +793,68 @@ export default function Home() {
             </div>
           </div>
           <div className="scrollable-content">
+            
+            {/* Hub Discovery Section */}
+            <div className="mac-card-container" style={{ marginBottom: 24, border: '1px solid #333' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <h3 style={{ margin: 0 }}>Hugging Face Hub Discovery</h3>
+                  <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Search and pull MLX-compatible models from the cloud</div>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input 
+                    type="text" 
+                    className="mac-input" 
+                    placeholder="Search Hugging Face (e.g. Llama 3, Qwen, DeepSeek...)" 
+                    style={{ paddingLeft: 40 }}
+                    value={hubQuery}
+                    onChange={(e) => setHubQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && searchHub()}
+                  />
+                  <svg style={{ position: 'absolute', left: 14, top: 14, color: 'var(--text-dim)' }} width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
+                <button 
+                  className="run-btn" 
+                  style={{ padding: '8px 32px', whiteSpace: 'nowrap' }}
+                  onClick={searchHub}
+                  disabled={isSearchingHub}
+                >
+                  {isSearchingHub ? 'Searching...' : 'Explore Hub'}
+                </button>
+              </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+              {hubResults.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16, marginTop: 24 }}>
+                  {hubResults.map(model => (
+                    <div key={model.id} className="mac-card-container" style={{ margin: 0, padding: 16, border: '1px solid #222', background: '#080808' }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, height: 32, overflow: 'hidden' }}>{model.name}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <span title="Downloads" style={{ fontSize: 10, color: '#666' }}>⬇ {model.downloads > 1000 ? (model.downloads/1000).toFixed(1)+'k' : model.downloads}</span>
+                          <span title="Likes" style={{ fontSize: 10, color: '#666' }}>♥ {model.likes}</span>
+                        </div>
+                        <button 
+                          className="run-btn" 
+                          style={{ padding: '4px 12px', fontSize: 10, background: '#111', border: '1px solid #333' }}
+                          onClick={() => {
+                            setConfig(prev => ({ ...prev, modelName: model.id }));
+                            setModelSource('hub');
+                            setMainTab('training');
+                          }}
+                        >
+                          Use
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               {scannedModels
                 .filter(m => m.name.toLowerCase().includes(modelSearch.toLowerCase()))
                 .map(model => (
@@ -836,6 +967,7 @@ export default function Home() {
       ) : mainTab === 'editor' ? (
         <div className="main-content">
           <div className="top-nav">
+             <TelemetryBar stats={stats} />
              <div className="top-nav-title">KNOWLEDGE & DATA EDITOR</div>
           </div>
           <div className="editor-layout">
@@ -892,6 +1024,7 @@ export default function Home() {
       ) : (
         <div className="main-content">
           <div className="top-nav">
+            <TelemetryBar stats={stats} />
             <div className="top-nav-title">MLX-Tune GUI</div>
           </div>
           <div className="section-header">
@@ -947,6 +1080,77 @@ export default function Home() {
     </div>
   );
 }
+
+const TelemetryBar = ({ stats }: any) => (
+  <div className="telemetry-bar">
+    <StatItem 
+      label="Unified Mem" 
+      value={`${stats.memory ? (stats.memory.used / (1024**3)).toFixed(1) : '0'}GB`} 
+      percent={stats.memory?.percent || '0'} 
+    />
+    <StatItem 
+      label="CPU Load" 
+      value={`${stats.cpu?.percent || '0'}%`} 
+      percent={stats.cpu?.percent || '0'} 
+    />
+  </div>
+);
+
+const StatItem = ({ label, value, percent }: any) => {
+  const p = parseFloat(percent);
+  const status = p > 85 ? 'danger' : p > 70 ? 'warning' : '';
+  return (
+    <div className="stat-item">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+      <div className="stat-progress-bg">
+        <div className={`stat-progress-fill ${status}`} style={{ width: `${percent}%` }} />
+      </div>
+    </div>
+  );
+};
+
+const LossSparkline = ({ data, color }: { data: { step: number; loss: number }[], color: string }) => {
+  if (data.length < 2) return null;
+  
+  const minLoss = Math.min(...data.map(d => d.loss));
+  const maxLoss = Math.max(...data.map(d => d.loss));
+  const range = maxLoss - minLoss || 1;
+  const padding = range * 0.1;
+  
+  const width = 500;
+  const height = 150;
+  
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((d.loss - (minLoss - padding)) / (range + padding * 2)) * height;
+    return `${x},${y}`;
+  }).join(' ');
+
+  return (
+    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+      <defs>
+        <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+        style={{ filter: 'drop-shadow(0 0 8px ' + color + ')' }}
+      />
+      <path
+        d={`M0,${height} L${points} L${width},${height} Z`}
+        fill="url(#gradient)"
+      />
+    </svg>
+  );
+};
 
 const FileTreeItem = ({ item, level = 0, onOpen, activePath }: any) => {
   const [isOpen, setIsOpen] = useState(false);

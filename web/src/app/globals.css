@@ -682,3 +682,59 @@ h3 {
 
 .folder-icon { color: #f2c94c; opacity: 0.8; }
 .file-icon { color: #56ccf2; opacity: 0.8; }
+
+/* Telemetry Styles */
+.telemetry-bar {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-right: 24px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 80px;
+}
+
+.stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  font-family: ui-monospace, monospace;
+}
+
+.stat-progress-bg {
+  width: 100%;
+  height: 2px;
+  background: rgba(255,255,255,0.05);
+  margin-top: 4px;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.stat-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  transition: width 0.5s ease-out;
+}
+
+.stat-progress-fill.warning {
+  background: #f2c94c;
+  box-shadow: 0 0 8px #f2c94c;
+}
+
+.stat-progress-fill.danger {
+  background: #eb5757;
+  box-shadow: 0 0 8px #eb5757;
+}
