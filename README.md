@@ -1,6 +1,24 @@
 <p align="center">
-  <strong>MLX-Tune GUI: The Visual Orchestrator for Apple Silicon</strong><br>
-  <em>The professional, Mac-native interface for high-performance MLX fine-tuning.</em>
+  <img src="https://raw.githubusercontent.com/ARahim3/mlx-tune/main/mlx-tune-logo.png" alt="MLX-Tune Logo" width="300"/>
+</p>
+
+<p align="center">
+  <strong>Fine-tune LLMs, Vision, Audio, and OCR models on your Mac</strong><br>
+  <em>SFT, DPO, GRPO, Vision, TTS, STT, Embedding, and OCR fine-tuning — natively on MLX. Unsloth-compatible API.</em>
+</p>
+
+<p align="center">
+  <br>
+  <a href="https://github.com/ARahim3/mlx-tune#installation"><img src="https://img.shields.io/badge/Platform-Apple%20Silicon-black?logo=apple" alt="Platform"></a>
+  <a href="https://github.com/ARahim3/mlx-tune#requirements"><img src="https://img.shields.io/badge/Python-3.9+-blue?logo=python&logoColor=white" alt="Python"></a>
+  <a href="https://github.com/ml-explore/mlx"><img src="https://img.shields.io/badge/MLX-0.20+-green" alt="MLX"></a>
+  <a href="https://github.com/ARahim3/mlx-tune#license"><img src="https://img.shields.io/badge/License-Apache%202.0-orange" alt="License"></a>
+</p>
+
+<p align="center">
+  <a href="https://arahim3.github.io/mlx-tune/">Documentation</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="https://github.com/ARahim3/mlx-tune#supported-training-methods">Training Methods</a>
 </p>
 
 ---
