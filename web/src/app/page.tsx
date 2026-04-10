@@ -110,6 +110,91 @@ export default function Home() {
     { id: 'GRPO', label: 'Reasoning (GRPO)' },
   ];
 
+  const [mainTab, setMainTab] = useState<'training' | 'models' | 'settings' | 'editor'>('training');
+  
+  // Editor State
+  const [fileTree, setFileTree] = useState<any[]>([]);
+  const [openTabs, setOpenTabs] = useState<any[]>([]);
+  const [activeTabPath, setActiveTabPath] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (mainTab === 'editor' && fileTree.length === 0) {
+      fetchFileTree();
+    }
+  }, [mainTab]);
+
+  const fetchFileTree = async () => {
+    try {
+      const res = await fetch('/api/files/tree');
+      const data = await res.json();
+      setFileTree(data);
+    } catch (err) {
+      console.error('Failed to fetch tree', err);
+    }
+  };
+
+  const openFile = async (path: string, name: string) => {
+    // Check if already open
+    const existing = openTabs.find(t => t.path === path);
+    if (existing) {
+      setActiveTabPath(path);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/files/content?path=${encodeURIComponent(path)}`);
+      const { content } = await res.json();
+      const newTab = { path, name, content, originalContent: content, isModified: false };
+      setOpenTabs([...openTabs, newTab]);
+      setActiveTabPath(path);
+    } catch (err) {
+      console.error('Failed to open file', err);
+    }
+  };
+
+  const closeTab = (e: React.MouseEvent, path: string) => {
+    e.stopPropagation();
+    const newTabs = openTabs.filter(t => t.path !== path);
+    setOpenTabs(newTabs);
+    if (activeTabPath === path) {
+      setActiveTabPath(newTabs.length > 0 ? newTabs[newTabs.length - 1].path : null);
+    }
+  };
+
+  const handleEditorChange = (content: string) => {
+    setOpenTabs(openTabs.map(t => 
+      t.path === activeTabPath 
+        ? { ...t, content, isModified: content !== t.originalContent } 
+        : t
+    ));
+  };
+
+  const saveActiveFile = async () => {
+    const tab = openTabs.find(t => t.path === activeTabPath);
+    if (!tab || isSaving) return;
+
+    setIsSaving(true);
+    try {
+      const res = await fetch('/api/files/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: tab.path, content: tab.content }),
+      });
+      if (res.ok) {
+        setOpenTabs(openTabs.map(t => 
+          t.path === activeTabPath 
+            ? { ...t, originalContent: t.content, isModified: false } 
+            : t
+        ));
+      }
+    } catch (err) {
+      console.error('Save failed', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   // Load Settings
   useEffect(() => {
     const saved = localStorage.getItem('mlxtune_settings');
@@ -347,7 +432,6 @@ export default function Home() {
     }
   };
 
-  const [mainTab, setMainTab] = useState<'training' | 'models' | 'settings'>('training');
   const revealModel = async (path: string) => {
     try {
       await fetch('/api/reveal', {
@@ -377,12 +461,11 @@ export default function Home() {
         >
           <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5l10-5l-10-5zM2 17l10 5l10-5M2 12l10 5l10-5"/></svg>
         </div>
-        <div 
-          className={`slim-icon ${mainTab === 'models' ? 'active' : ''}`} 
-          title="Model Library"
-          onClick={() => setMainTab('models')}
-        >
-          <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <div className={`slim-icon ${mainTab === 'models' ? 'active' : ''}`} onClick={() => setMainTab('models')} title="Model Library">
+          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M22 19V5a2 2 0 00-2-2H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2zM6 13h4M6 17h8M6 9h12"/></svg>
+        </div>
+        <div className={`slim-icon ${mainTab === 'editor' ? 'active' : ''}`} onClick={() => setMainTab('editor')} title="Code & Data Editor">
+          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg>
         </div>
         <div 
           className={`slim-icon ${mainTab === 'settings' ? 'active' : ''}`} 
@@ -750,6 +833,62 @@ export default function Home() {
             )}
           </div>
         </div>
+      ) : mainTab === 'editor' ? (
+        <div className="main-content">
+          <div className="top-nav">
+             <div className="top-nav-title">KNOWLEDGE & DATA EDITOR</div>
+          </div>
+          <div className="editor-layout">
+            <div className="file-sidebar">
+              <div style={{ padding: '0 16px 12px', fontSize: 11, color: 'var(--text-dim)', borderBottom: '1px solid var(--border)' }}>WORKSPACE</div>
+              <div style={{ marginTop: 12 }}>
+                {fileTree.map(item => (
+                  <FileTreeItem key={item.id} item={item} onOpen={openFile} activePath={activeTabPath} />
+                ))}
+              </div>
+            </div>
+            <div className="editor-main">
+              <div className="tab-bar">
+                {openTabs.map(tab => (
+                  <div 
+                    key={tab.path} 
+                    className={`tab ${activeTabPath === tab.path ? 'active' : ''}`}
+                    onClick={() => setActiveTabPath(tab.path)}
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {tab.name}{tab.isModified ? '*' : ''}
+                    </span>
+                    <span className="tab-close" onClick={(e) => closeTab(e, tab.path)}>×</span>
+                  </div>
+                ))}
+              </div>
+              {activeTabPath ? (
+                <>
+                  <textarea 
+                    className="code-area"
+                    value={openTabs.find(t => t.path === activeTabPath)?.content || ''}
+                    onChange={(e) => handleEditorChange(e.target.value)}
+                    spellCheck={false}
+                  />
+                  <div className="editor-footer">
+                    <button 
+                      className="run-btn" 
+                      style={{ padding: '8px 20px', fontSize: 12 }}
+                      disabled={!openTabs.find(t => t.path === activeTabPath)?.isModified || isSaving}
+                      onClick={saveActiveFile}
+                    >
+                      {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: 13 }}>
+                  Select a file from the sidebar to start editing
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="main-content">
           <div className="top-nav">
@@ -808,3 +947,44 @@ export default function Home() {
     </div>
   );
 }
+
+const FileTreeItem = ({ item, level = 0, onOpen, activePath }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const isSelected = activePath === item.id;
+
+  if (item.isDir) {
+    return (
+      <div>
+        <div 
+          className="file-item" 
+          style={{ paddingLeft: 16 + level * 16 }}
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <span className="folder-icon">{isOpen ? '▼' : '▶'}</span>
+          <span>{item.name}</span>
+        </div>
+        {isOpen && item.children.map((child: any) => (
+          <FileTreeItem key={child.id} item={child} level={level + 1} onOpen={onOpen} activePath={activePath} />
+        ))}
+      </div>
+    );
+  }
+
+  const getIcon = (name: string) => {
+    if (name.endsWith('.py')) return '🐍';
+    if (name.endsWith('.json') || name.endsWith('.jsonl')) return '{}';
+    if (name.endsWith('.md')) return 'M↓';
+    return '📄';
+  };
+
+  return (
+    <div 
+      className={`file-item ${isSelected ? 'active' : ''}`} 
+      style={{ paddingLeft: 16 + level * 16 }}
+      onClick={() => onOpen(item.id, item.name)}
+    >
+      <span className="file-icon">{getIcon(item.name)}</span>
+      <span>{item.name}</span>
+    </div>
+  );
+};
